@@ -2,7 +2,7 @@
 
 **Sign. Send. Keep everything moving.**
 
-LumoDossier is an electronic-signature workspace for business PDFs. A standalone sender dashboard, a recipient signing room and an optional Touchlumo component use the same NestJS API. The single public home page hosts sign-in, registration and password recovery over a moving 3D document scene. Senders work in a private dashboard. Recipients open an expiring signing link without creating an account.
+LumoDossier is an electronic-signature workspace for business PDFs. The public home page fits on one screen, with a moving 3D agreement and controls to create an account or sign in. Registration and password recovery open on that page. The private sender dashboard, recipient signing room and optional Touchlumo component share the same NestJS API. Recipients open an expiring signing link without creating an account.
 
 ![Animated LumoDossier signing workspace](docs/images/lumodossier-motion.webp)
 

@@ -522,11 +522,12 @@ function makeScene(T: Three, root: HTMLDivElement, screen: HTMLDivElement, initi
     const { width, height } = root.getBoundingClientRect();
     if (!width || !height) return;
     const aspect = width / height;
-    const centered = width <= 760 || aspect < 1.18;
-    const viewHeight = Math.max(5.88, (centered ? 4.58 : 8.5) / aspect);
+    const focusX = parseFloat(getComputedStyle(root).getPropertyValue('--ps-focus-x')) / 100;
+    const centered = focusX === 0.5;
+    const viewHeight = centered ? Math.max(5.88, 4.58 / aspect) : Math.max(6.5, 9.25 / aspect);
     camera.aspect = aspect;
     camera.fov = 2 * T.MathUtils.radToDeg(Math.atan(viewHeight / (2 * camera.position.z)));
-    camera.setViewOffset(width, height, centered ? 0 : -width * 0.243, 0, width, height);
+    camera.setViewOffset(width, height, width * (0.5 - focusX), 0, width, height);
     camera.updateProjectionMatrix();
     focus.position.set(-0.12, 0.03, 0);
     root.dataset.centered = String(centered);

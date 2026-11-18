@@ -62,17 +62,41 @@ async function fillRecipient(browser: Browser, url: string, name: string, draw =
   ).toBeVisible();
   return { p, context };
 }
-test('landing and mobile navigation fit the viewport', async ({ page }, info) => {
+test('one home screen fits desktop and mobile and opens both account dialogs', async ({
+  page,
+}, info) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sign. Send.Keep everythingmoving.');
+  await page.evaluate(() => document.fonts.ready);
   await page.getByRole('button', { name: 'Pause background motion' }).click();
   await expect(page.getByRole('button', { name: 'Play background motion' })).toBeVisible();
+  const fits = () =>
+    page.evaluate(() => {
+      const root = document.documentElement;
+      return root.scrollWidth <= root.clientWidth && root.scrollHeight <= root.clientHeight + 1;
+    });
+  expect(await fits()).toBe(true);
   await page.screenshot({ path: info.outputPath('landing-desktop.png') });
-  await page.setViewportSize({ width: 390, height: 844 });
+  for (const viewport of [
+    { width: 320, height: 568 },
+    { width: 667, height: 375 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await expect.poll(fits).toBe(true);
+    await expect(page.getByRole('link', { name: 'Create account', exact: true })).toBeInViewport({
+      ratio: 1,
+    });
+    await expect(page.getByRole('link', { name: 'Sign in', exact: true })).toBeInViewport({ ratio: 1 });
+  }
   await page.screenshot({ path: info.outputPath('landing-mobile.png') });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.getByRole('link', { name: 'Explore the workflow' }).click();
-  await expect(page).toHaveURL(/#workflow$/);
+  await page.getByRole('link', { name: 'Create account', exact: true }).click();
+  await expect(
+    page.getByRole('dialog').getByRole('heading', { name: 'Create an account' }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/\?account=signup$/);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByRole('link', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Welcome back.' })).toBeVisible();
   await expect(page).toHaveURL(/\/\?account=signin$/);

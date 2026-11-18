@@ -59,7 +59,7 @@
   position: absolute;
   left: var(--ps-focus-x);
   top: var(--ps-focus-y);
-  width: min(48cqw, 87cqh);
+  width: min(45cqw, 80cqh);
   aspect-ratio: 1;
   transform: translate(-50%, -50%);
   perspective: 850px;
@@ -338,18 +338,8 @@
     transition: none;
   }
 }
-@container (max-width: 760px) {
-  .ps-atmosphere,
-  .ps-fallback-center {
-    --ps-focus-x: 50%;
-  }
-  .ps-fallback-center {
-    width: min(94cqw, 90cqh);
-  }
-}
-@container (max-aspect-ratio: 1.18) {
-  .ps-atmosphere,
-  .ps-fallback-center {
+@media (orientation: portrait) {
+  .protection-scene {
     --ps-focus-x: 50%;
   }
   .ps-fallback-center {
