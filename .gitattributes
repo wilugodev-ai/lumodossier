@@ -1,0 +1,8 @@
+* text=auto eol=lf
+*.pdf binary
+*.ttf binary
+*.webp binary
+*.png binary
+# Preserve the original embedded-font notice and already-applied SQL bytes.
+apps/api/assets/LICENSE_LIBERATION -whitespace
+supabase/migrations/*.sql text eol=lf whitespace=-blank-at-eof

@@ -1,0 +1,56 @@
+# yaml-language-server: $schema=https://render.com/schema/render.yaml.json
+services:
+  - type: web
+    name: lumodossier-web-test
+    runtime: node
+    plan: free
+    buildCommand: corepack pnpm install --frozen-lockfile --prod=false && corepack pnpm --filter @lumo/web build
+    startCommand: corepack pnpm --filter @lumo/web start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.x
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      # After first sync, add NEXT_PUBLIC_API_ORIGIN to this service and rebuild.
+      # Render assigns the API its public hostname during provisioning.
+
+  - type: web
+    name: lumodossier-api-test
+    runtime: node
+    plan: free
+    buildCommand: corepack pnpm install --frozen-lockfile --prod=false && corepack pnpm --filter @lumo/api build
+    startCommand: corepack pnpm --filter @lumo/api start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.x
+      - key: WEB_ORIGIN
+        fromService:
+          type: web
+          name: lumodossier-web-test
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: SUPABASE_URL
+        fromService:
+          type: web
+          name: lumodossier-web-test
+          envVarKey: NEXT_PUBLIC_SUPABASE_URL
+      - key: SUPABASE_PUBLISHABLE_KEY
+        fromService:
+          type: web
+          name: lumodossier-web-test
+          envVarKey: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_CA_BASE64
+        sync: false
+      - key: GCS_BUCKET
+        sync: false
+      - key: GCS_CREDENTIALS_BASE64
+        sync: false
+      - key: LINK_SECRET
+        generateValue: true
+      - key: JOBS_INLINE
+        value: "true"

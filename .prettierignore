@@ -1,0 +1,8 @@
+node_modules/
+**/.next*/
+**/dist/
+**/public/pdfjs/
+.local/
+test-results/
+pnpm-lock.yaml
+apps/api/assets/

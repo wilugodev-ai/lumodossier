@@ -1,0 +1,28 @@
+{
+  "name": "@lumo/web",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "node scripts/pdf-assets.mjs && next dev --webpack --hostname 0.0.0.0",
+    "build": "node scripts/pdf-assets.mjs && next build --webpack",
+    "start": "next start --hostname 0.0.0.0",
+    "typecheck": "next typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "16.3.5",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "@supabase/supabase-js": "2.116.0",
+    "pdfjs-dist": "6.5.438",
+    "lucide-react": "^0.577.0",
+    "@fontsource/dm-sans": "^5.2.6",
+    "@fontsource/instrument-serif": "^5.2.6",
+    "three": "0.187.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/three": "0.187.0",
+    "typescript": "~5.9.3"
+  }
+}

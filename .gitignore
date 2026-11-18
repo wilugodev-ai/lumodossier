@@ -1,0 +1,16 @@
+node_modules/
+.next/
+.next-*/
+next-env.d.ts
+dist/
+.env
+.env.*
+!.env.example
+coverage/
+test-results/
+playwright-report/
+.local/
+*.tsbuildinfo
+*.log
+.DS_Store
+apps/web/public/pdfjs/

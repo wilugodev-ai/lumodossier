@@ -1,0 +1,27 @@
+{
+  "name": "lumodossier",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@12.5.1",
+  "engines": {
+    "node": ">=24.19.0 <25"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "lint": "eslint .",
+    "typecheck": "pnpm -r typecheck",
+    "migrate": "pnpm --filter @lumo/api migrate",
+    "test": "pnpm --filter @lumo/api test",
+    "test:e2e": "pnpm --filter @lumo/api e2e",
+    "preview:local": "pnpm --filter @lumo/api preview:local"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "^24.0.0",
+    "eslint": "9.39.5",
+    "typescript-eslint": "^8.0.0",
+    "typescript": "~5.9.3",
+    "prettier": "^3.8.1"
+  }
+}
