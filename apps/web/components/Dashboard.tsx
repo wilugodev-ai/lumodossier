@@ -12,13 +12,18 @@ import {
   Building2,
   ChevronLeft,
   Plus,
+  Users,
+  UserRound,
 } from 'lucide-react';
 import { Brand } from './Brand';
 import { MotionControl } from './Motion';
 import { Documents, Upload } from './Documents';
 import { Editor } from './Editor';
 import { Tracking } from './Tracking';
-import { authClient, message, sender } from '../lib/client';
+import { message, sender, signOut } from '../lib/client';
+import { useSenderSession } from '../lib/use-sender-session';
+import { TeamPanel } from './TeamPanel';
+import { PasswordForm } from './Password';
 import type { Detail, Refs, Workspace } from '../lib/types';
 
 function Record({ w, id, back }: { w: Workspace; id: string; back: () => void }) {
@@ -75,14 +80,17 @@ function Record({ w, id, back }: { w: Workspace; id: string; back: () => void })
 export function Dashboard() {
   const params = useSearchParams(),
     router = useRouter(),
+    { user, error: sessionError } = useSenderSession(),
     [spaces, setSpaces] = useState<Workspace[] | null>(null),
     [error, setError] = useState(''),
-    [email, setEmail] = useState(''),
     [name, setName] = useState(''),
     [busy, setBusy] = useState(false),
     [menu, setMenu] = useState(false),
     [dark, setDark] = useState(true);
   const adding = params.has('newWorkspace');
+  const view = params.get('view'),
+    email = user?.email,
+    userId = user?.id;
   const selected = params.get('workspace'),
     doc = params.get('document'),
     upload = params.has('new'),
@@ -103,25 +111,27 @@ export function Dashboard() {
     setMenu(false);
   };
   useEffect(() => {
-    let live = true;
     setDark(localStorage.getItem('lumo-theme') !== 'light');
-    (async () => {
-      const result = await authClient().auth.getSession();
-      if (!live) return;
-      if (!result.data.session) {
-        location.replace('/login?next=' + encodeURIComponent(location.pathname + location.search));
-        return;
+    if (!userId) return;
+    let live = true;
+    async function refresh() {
+      try {
+        const rows = await sender<Workspace[]>('/workspaces');
+        if (live) {
+          setSpaces(rows);
+          setError('');
+        }
+      } catch (e) {
+        if (live) setError(message(e));
       }
-      setEmail(result.data.session.user.email ?? '');
-      const rows = await sender<Workspace[]>('/workspaces');
-      if (live) setSpaces(rows);
-    })().catch((e) => {
-      if (live) setError(message(e));
-    });
+    }
+    void refresh();
+    window.addEventListener('focus', refresh);
     return () => {
       live = false;
+      window.removeEventListener('focus', refresh);
     };
-  }, []);
+  }, [userId, view]);
   async function create(e: FormEvent) {
     e.preventDefault();
     setError('');
@@ -139,9 +149,7 @@ export function Dashboard() {
   }
   async function logout() {
     try {
-      const { error } = await authClient().auth.signOut({ scope: 'local' });
-      if (error) throw error;
-      location.assign('/');
+      await signOut();
     } catch (e) {
       setError(message(e));
     }
@@ -188,13 +196,21 @@ export function Dashboard() {
             <button
               key={label}
               disabled={!spaces}
-              className={!adding && !upload && !doc && filter === key ? 'active' : ''}
+              className={!view && !adding && !upload && !doc && filter === key ? 'active' : ''}
               onClick={() => go(key ? { status: key } : {}, false)}
             >
               <Icon size={18} />
               {label}
             </button>
           ))}
+          <button
+            disabled={!workspace}
+            className={view === 'team' ? 'active' : ''}
+            onClick={() => go({ view: 'team' }, false)}
+          >
+            <Users size={18} />
+            Team
+          </button>
           <button disabled={!spaces} onClick={() => go({ newWorkspace: '1' }, false)}>
             <Plus size={18} />
             Create workspace
@@ -208,7 +224,10 @@ export function Dashboard() {
           </button>
           {email && (
             <>
-              <small>{email}</small>
+              <button onClick={() => go({ view: 'account' }, false)} aria-pressed={view === 'account'}>
+                <UserRound size={16} />
+                Your account
+              </button>
               <button onClick={logout}>
                 <LogOut size={16} />
                 Sign out
@@ -218,13 +237,41 @@ export function Dashboard() {
         </div>
       </aside>
       <main id="main" className="desk-main">
-        {error && (
+        {(error || sessionError) && (
           <div className="notice error" role="alert">
-            {error} <a href="/login">Sign in</a>
+            {error || sessionError} <a href="/?account=signin">Sign in</a>
           </div>
         )}
         {spaces === null ? (
           <p role="status">{error ? 'The workspace could not be opened.' : 'Opening workspace…'}</p>
+        ) : view === 'account' && email ? (
+          <div className="account-view">
+            <header className="workspace-head">
+              <div>
+                <span className="eyebrow">Workspace settings</span>
+                <h1>Your account</h1>
+              </div>
+            </header>
+            <section className="team-card">
+              <h2>Account details</h2>
+              <dl className="account-details">
+                <dt>Email</dt>
+                <dd>{email}</dd>
+                {workspace && (
+                  <>
+                    <dt>Workspace</dt>
+                    <dd>{workspace.name}</dd>
+                    <dt>Role</dt>
+                    <dd className="team-role">{workspace.role}</dd>
+                  </>
+                )}
+              </dl>
+            </section>
+            <section className="team-card">
+              <h2>Change password</h2>
+              <PasswordForm email={email} />
+            </section>
+          </div>
         ) : adding || !spaces.length ? (
           <form className="form-panel onboard" onSubmit={create}>
             <span className="eyebrow">LumoDossier</span>
@@ -246,6 +293,8 @@ export function Dashboard() {
           </form>
         ) : !workspace ? (
           <p className="notice error">This workspace is unavailable to your account.</p>
+        ) : view === 'team' ? (
+          <TeamPanel key={workspace.id} workspace={workspace} />
         ) : doc ? (
           <Record key={workspace.id + doc} w={workspace} id={doc} back={() => go()} />
         ) : upload && workspace.role !== 'viewer' ? (

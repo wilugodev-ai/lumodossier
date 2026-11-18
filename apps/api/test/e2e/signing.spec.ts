@@ -2,12 +2,16 @@ import { test, expect, type Page, type Browser } from '@playwright/test';
 import { randomUUID, createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { samplePdf } from '../sample-pdf';
+import { recoveryMailbox, recoveryLink } from './recovery-mail';
 
-async function account(page: Page) {
-  const email = 'sender-' + randomUUID() + '@example.invalid',
-    password = 'Local-' + randomUUID();
+async function account(
+  page: Page,
+  name = 'Test Sender',
+  email = 'sender-' + randomUUID() + '@example.invalid',
+) {
+  const password = 'Local-' + randomUUID();
   await page.goto('/login?mode=signup');
-  await page.getByLabel('Full name').fill('Test Sender');
+  await page.getByLabel('Full name').fill(name);
   await page.getByLabel('Email address').fill(email);
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
@@ -71,6 +75,124 @@ test('landing and mobile navigation fit the viewport', async ({ page }, info) =>
   await expect(page).toHaveURL(/#workflow$/);
   await page.getByRole('link', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Welcome back.' })).toBeVisible();
+  await expect(page).toHaveURL(/\/\?account=signin$/);
+  await page.screenshot({ path: info.outputPath('mobile-sign-in.png') });
+  await page.getByRole('button', { name: 'Forgot password?' }).click();
+  await expect(page.getByRole('heading', { name: 'Reset your password' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page).toHaveURL('http://127.0.0.1:3029/');
+});
+test('a workspace owner manages an email-matched invitation and member access from one home page', async ({
+  page,
+  browser,
+}, info) => {
+  const owner = await account(page, 'Jordan Ellis', 'jordan.ellis@example.invalid');
+  await page
+    .getByRole('navigation', { name: 'Workspace navigation' })
+    .getByRole('button', { name: 'Create workspace' })
+    .click();
+  await page.getByLabel('Workspace name').fill('Studio team');
+  await page.locator('form').getByRole('button', { name: 'Create workspace' }).click();
+  await expect(page.getByText('Your document shelf is empty')).toBeVisible();
+  await page.getByRole('button', { name: 'Team', exact: true }).click();
+  const email = 'case.reader@example.invalid',
+    password = 'Reader-' + randomUUID();
+  await page.getByLabel('Teammate email').fill(email);
+  await page.getByRole('button', { name: 'Create invite link' }).click();
+  const url = await page.getByLabel('Private team invitation').inputValue();
+  await page.getByRole('button', { name: 'Hide invitation link' }).click();
+  const other = await browser.newContext(),
+    reader = await other.newPage();
+  try {
+    await reader.goto(url);
+    await reader.getByRole('button', { name: 'Create an account' }).click();
+    await reader.getByLabel('Full name').fill('Case Reader');
+    await reader.getByLabel('Email address').fill(email);
+    await reader.getByLabel('Password', { exact: true }).fill(password);
+    await reader.getByRole('button', { name: 'Create account', exact: true }).click();
+    await reader.getByRole('button', { name: 'Accept invitation' }).click();
+    await expect(reader.getByRole('heading', { name: 'Team', exact: true })).toBeVisible();
+    await expect(reader.getByText('Case Reader', { exact: true })).toBeVisible();
+    await expect(reader.getByLabel('Teammate email')).toHaveCount(0);
+    await reader.getByRole('button', { name: 'All documents', exact: true }).click();
+    await expect(reader.getByText('Your document shelf is empty')).toBeVisible();
+    await expect(reader.getByRole('button', { name: 'New request' })).toHaveCount(0);
+    await page.reload();
+    await page.getByLabel('Role for ' + email).selectOption('member');
+    await expect(page.getByRole('status')).toHaveText('Workspace role updated.');
+    await reader.reload();
+    await expect(reader.getByRole('button', { name: 'New request' })).toBeVisible();
+    await page.screenshot({ path: info.outputPath('workspace-team.png') });
+    await page.getByRole('button', { name: 'Remove', exact: true }).click();
+    await page.getByRole('button', { name: 'Confirm removal' }).click();
+    await expect(page.getByRole('status')).toHaveText('Workspace access removed.');
+    await reader.reload();
+    await expect(reader.getByText('This workspace is unavailable to your account.')).toBeVisible();
+  } finally {
+    await other.close();
+  }
+  await page.getByRole('button', { name: 'Your account' }).click();
+  await page.getByLabel('Current password', { exact: true }).fill('incorrect-password');
+  const changed = 'Updated-' + randomUUID();
+  await page.getByLabel('New password', { exact: true }).fill(changed);
+  await page.getByLabel('Confirm new password', { exact: true }).fill(changed);
+  await page.getByRole('button', { name: 'Update password' }).click();
+  await expect(page.locator('form').getByRole('alert')).toHaveText(
+    'Your current password could not be verified.',
+  );
+  await page.getByLabel('Current password', { exact: true }).fill(owner.password);
+  await page.getByRole('button', { name: 'Update password' }).click();
+  await expect(page.getByRole('status')).toHaveText('Your password was updated.');
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await page.getByRole('link', { name: 'Sign in', exact: true }).click();
+  await page.getByLabel('Email address').fill(owner.email);
+  await page.getByLabel('Password', { exact: true }).fill(changed);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Your account' })).toBeVisible();
+  const otherTab = await page.context().newPage();
+  await otherTab.goto('/dashboard');
+  await expect(otherTab.getByRole('button', { name: 'Your account' })).toBeVisible();
+  await otherTab.evaluate(() => {
+    const key = Object.keys(localStorage).find((k) => k.startsWith('lumodossier:last-activity:'));
+    if (!key) throw Error('Missing session activity timestamp.');
+    localStorage.setItem(key, String(Date.now() - 31 * 60_000));
+  });
+  await expect(page).toHaveURL(/account=signin/);
+  await expect(page.getByText('Your session ended after 30 minutes of inactivity.')).toBeVisible();
+  await otherTab.close();
+});
+test('a disposable sender resets a password from a real Supabase recovery email captured on loopback', async ({
+  page,
+}) => {
+  test.skip(!process.env.LUMO_GOTRUE_BINARY, 'Requires a real local Supabase Auth binary.');
+  const user = await account(page);
+  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  const mailbox = await recoveryMailbox(Number(process.env.LUMO_TEST_SMTP_PORT), user.email);
+  try {
+    await page.getByRole('link', { name: 'Sign in', exact: true }).click();
+    await page.getByRole('button', { name: 'Forgot password?' }).click();
+    await page.getByLabel('Email address').fill(user.email);
+    await page.getByRole('button', { name: 'Send reset link' }).click();
+    await expect(page.getByRole('status')).toContainText('check its inbox');
+    await page.goto(recoveryLink(await mailbox.mail));
+    await expect(page.getByRole('heading', { name: 'Set a new password' })).toBeVisible();
+    const password = 'Recovered-' + randomUUID();
+    await page.getByLabel('New password', { exact: true }).fill(password);
+    await page.getByLabel('Confirm new password', { exact: true }).fill(password);
+    await page.getByRole('button', { name: 'Update password' }).click();
+    await expect(page.getByRole('status')).toContainText('Your password was updated.');
+    await page.getByRole('link', { name: 'Open your workspace' }).click();
+    await page.getByRole('button', { name: 'Sign out' }).click();
+    await page.getByRole('link', { name: 'Sign in', exact: true }).click();
+    await page.getByLabel('Email address').fill(user.email);
+    await page.getByLabel('Password', { exact: true }).fill(password);
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Your account' })).toBeVisible();
+  } finally {
+    await mailbox.close();
+  }
 });
 test('disposable sender prepares, resumes and sends a PDF; two account-free recipients sign and download the verified final copy', async ({
   page,

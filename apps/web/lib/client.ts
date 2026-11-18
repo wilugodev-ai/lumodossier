@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { isIdle } from './activity';
 let instance: SupabaseClient | undefined;
 export function authClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -10,7 +11,29 @@ export function authClient() {
 export async function access() {
   const { data, error } = await authClient().auth.getSession();
   if (error || !data.session) throw new Error('Sign in to open your workspace.');
+  if (isIdle(data.session.user.id)) {
+    await expireSession();
+    throw new Error('Your session ended after 30 minutes of inactivity.');
+  }
   return data.session.access_token;
+}
+let leaving = false;
+export function isLeaving() {
+  return leaving;
+}
+export async function signOut(idle = false) {
+  if (leaving) return;
+  leaving = true;
+  try {
+    const { error } = await authClient().auth.signOut({ scope: 'local' });
+    if (error && !idle) throw error;
+    location.replace(idle ? '/?account=signin&idle=1' : '/');
+  } finally {
+    leaving = false;
+  }
+}
+export async function expireSession() {
+  await signOut(true);
 }
 export async function request(
   path: string,

@@ -194,8 +194,7 @@
 }
 .section-head h2,
 .security-grid h2,
-.crm-inner h2,
-.auth-caption h2 {
+.crm-inner h2 {
   color: #f0f7f4;
 }
 .workflow em,
@@ -227,8 +226,7 @@
   gap: 7%;
   align-items: center;
 }
-.security-grid h2,
-.auth-caption h2 {
+.security-grid h2 {
   font:
     400 clamp(3.1rem, 5vw, 5.4rem)/0.98 'Instrument Serif',
     Georgia,
@@ -274,46 +272,7 @@
 .footer > span {
   color: #a5bcbb;
 }
-.auth-layout {
-  background: transparent;
-  color: var(--ink);
-  position: relative;
-}
-.auth-main {
-  background: linear-gradient(105deg, #09161aed, #101e24cc);
-  border-right: 1px solid #2b4946;
-}
-.auth-volume {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  background: radial-gradient(ellipse at 60% 40%, #16404677, transparent 69%);
-}
-.auth-scene {
-  position: absolute;
-  inset: 0 -1% 16% -86%;
-  z-index: -1;
-  pointer-events: none;
-}
-.auth-caption {
-  position: absolute;
-  bottom: 12%;
-  left: 8%;
-  right: 5%;
-}
-.auth-caption h2 {
-  font-size: clamp(2.8rem, 4vw, 5.1rem);
-  margin: 0.5rem 0;
-}
-.auth-caption p {
-  color: #bbcfcc;
-  margin: 0;
-}
-.auth-volume > .motion-control {
-  position: absolute;
-  right: 5%;
-  bottom: 4%;
-}
+
 .product-surface .desk {
   background: #f4f7f3;
   color-scheme: light;
@@ -471,13 +430,7 @@
   .phase-grid article:nth-child(n + 3) {
     border-color: #354b4c;
   }
-  .auth-volume {
-    display: none;
-  }
-  .auth-main {
-    background: transparent;
-    border: 0;
-  }
+
   .security-grid {
     grid-template-columns: 1fr;
     gap: 2rem;

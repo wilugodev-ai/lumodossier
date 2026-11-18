@@ -14,14 +14,19 @@ async function run() {
     web = resolve(root, 'apps/web');
   const harness = await startEnvironment(preview);
   try {
-    if (preview) {
-      const assets = spawn(process.execPath, ['scripts/pdf-assets.mjs'], {
-        cwd: web,
-        stdio: 'inherit',
-        windowsHide: true,
-      });
-      if (await finished(assets)) throw Error('Could not prepare PDF preview assets.');
-    }
+    const env = {
+      ...process.env,
+      ...harness.env,
+      ...(preview ? { LUMO_NEXT_DIST_DIR: '.next-preview', NEXT_PUBLIC_LOCAL_PREVIEW: 'true' } : {}),
+    };
+    // A production Next build can outlast Playwright's web-server readiness
+    // deadline on Windows. Finish it before Playwright starts probing /health.
+    const prepare = spawn(
+      process.execPath,
+      preview ? ['scripts/pdf-assets.mjs'] : ['scripts/test-server.mjs', '--build'],
+      { cwd: web, env, stdio: 'inherit', windowsHide: true },
+    );
+    if (await finished(prepare)) throw Error('Could not prepare the local signing website.');
     const argv = preview
       ? [
           require.resolve('next/dist/bin/next', { paths: [web] }),
@@ -37,11 +42,7 @@ async function run() {
       cwd: preview ? web : root,
       windowsHide: true,
       stdio: 'inherit',
-      env: {
-        ...process.env,
-        ...harness.env,
-        ...(preview ? { LUMO_NEXT_DIST_DIR: '.next-preview', NEXT_PUBLIC_LOCAL_PREVIEW: 'true' } : {}),
-      },
+      env,
     });
     const stop = () => child.kill('SIGTERM');
     process.once('SIGINT', stop);

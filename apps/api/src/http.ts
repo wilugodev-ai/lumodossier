@@ -28,8 +28,11 @@ import { Signing } from './recipient';
 import { Services } from './providers';
 import { PdfInputError } from './pdf';
 import { statuses } from './sender';
+import { Team } from './team';
 
 const ENGINE = Symbol('signing');
+const TEAM = Symbol('team');
+const teamRole = z.enum(['member', 'viewer']);
 const uuid = new ParseUUIDPipe();
 const types = z.enum(['original', 'completed', 'record']);
 function token(auth?: string) {
@@ -80,7 +83,10 @@ class Errors implements ExceptionFilter {
 }
 @Controller()
 class Api {
-  constructor(@Inject(ENGINE) private readonly app: Signing) {}
+  constructor(
+    @Inject(ENGINE) private readonly app: Signing,
+    @Inject(TEAM) private readonly team: Team,
+  ) {}
   private who(auth?: string) {
     return this.app.services.auth.user(token(auth));
   }
@@ -98,6 +104,55 @@ class Api {
       who,
       z.strictObject({ name: z.string().trim().min(1).max(100) }).parse(body).name,
     );
+  }
+  @Get('v1/workspaces/:w/team') async teamMembers(
+    @Headers('authorization') a: string,
+    @Param('w', uuid) w: string,
+  ) {
+    return this.team.list(await this.who(a), w);
+  }
+  @Post('v1/workspaces/:w/team/invitations') async inviteMember(
+    @Headers('authorization') a: string,
+    @Param('w', uuid) w: string,
+    @Body() body: unknown,
+  ) {
+    const who = await this.who(a);
+    await this.team.limit('team/invite/' + who.id, 30);
+    const data = z
+      .strictObject({ email: z.string().trim().toLowerCase().pipe(z.email().max(254)), role: teamRole })
+      .parse(body);
+    return this.team.invite(who, w, data.email, data.role);
+  }
+  @Post('v1/workspaces/:w/team/invitations/:id/revoke') async revokeMemberInvite(
+    @Headers('authorization') a: string,
+    @Param('w', uuid) w: string,
+    @Param('id', uuid) id: string,
+  ) {
+    return this.team.revoke(await this.who(a), w, id);
+  }
+  @Patch('v1/workspaces/:w/team/members/:user') async manageMember(
+    @Headers('authorization') a: string,
+    @Param('w', uuid) w: string,
+    @Param('user', uuid) user: string,
+    @Body() body: unknown,
+  ) {
+    return this.team.change(
+      await this.who(a),
+      w,
+      user,
+      z.strictObject({ role: teamRole.nullable() }).parse(body).role,
+    );
+  }
+  @Post('v1/team/accept') async acceptTeamInvite(
+    @Headers('authorization') a: string,
+    @Body() body: unknown,
+  ) {
+    const who = await this.who(a);
+    await this.team.limit('team/accept/' + who.id, 30);
+    const data = z
+      .strictObject({ source: z.enum(['team', 'crm']), token: z.string().regex(/^[A-Za-z0-9_-]{43}$/) })
+      .parse(body);
+    return this.team.accept(who, data.source, data.token);
   }
   @Get('v1/workspaces/:w/documents') async documents(
     @Headers('authorization') a: string,
@@ -245,7 +300,13 @@ class Api {
   }
 }
 export async function httpServer(db: Database, services: Services, crmOrigin?: string) {
-  @Module({ controllers: [Api], providers: [{ provide: ENGINE, useValue: new Signing(db, services) }] })
+  @Module({
+    controllers: [Api],
+    providers: [
+      { provide: ENGINE, useValue: new Signing(db, services) },
+      { provide: TEAM, useValue: new Team(db, services) },
+    ],
+  })
   class App {}
   const app = await NestFactory.create<NestExpressApplication>(App, {
     logger: false,

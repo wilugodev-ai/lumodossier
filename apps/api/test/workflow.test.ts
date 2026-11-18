@@ -11,6 +11,7 @@ import { httpServer } from '../src/http';
 import { CONSENT_VERSION, type Draft, type Field, Problem } from '../src/model';
 import { sha256 } from '../src/pdf';
 import { tokenFor } from '../src/providers';
+import { Team } from '../src/team';
 
 let env: Awaited<ReturnType<typeof fixture>>,
   app: Signing,
@@ -62,6 +63,59 @@ const signing = (id: string, v: unknown) => ({
   consentVersion: CONSENT_VERSION,
   intent: true,
   values: { [id]: v },
+});
+test('team invitations require the matching verified account and support expiry, revocation, role changes and removal', async () => {
+  const team = new Team(env.db, env.services),
+    space = (await app.createSpace(env.owner, 'Team access test')).id,
+    address = env.other.email;
+  const token = (i: { url: string }) => i.url.split('#team.')[1];
+  const first = await team.invite(env.owner, space, address, 'member');
+  await assert.rejects(team.list(env.other, space), failure(404));
+  await assert.rejects(team.accept(env.viewer, 'team', token(first)), failure(403));
+  const fresh = await team.invite(env.owner, space, address, 'viewer');
+  await assert.rejects(team.accept(env.other, 'team', token(first)), failure(403));
+  const stored = await env.db.tx((tx) =>
+    tx.query('select token_hash from lumo.team_invitations where id=$1', [fresh.id]),
+  );
+  assert.equal(stored.rows[0].token_hash, sha256(Buffer.from(token(fresh))));
+  await team.revoke(env.owner, space, fresh.id);
+  await assert.rejects(team.accept(env.other, 'team', token(fresh)), failure(403));
+  const expired = await team.invite(env.owner, space, address, 'viewer');
+  await env.db.tx((tx) =>
+    tx.query("update lumo.team_invitations set expires_at=now()-interval '1 second' where id=$1", [
+      expired.id,
+    ]),
+  );
+  await assert.rejects(team.accept(env.other, 'team', token(expired)), failure(403));
+  const current = await team.invite(env.owner, space, address, 'viewer');
+  const accepted = await Promise.allSettled([
+    team.accept(env.other, 'team', token(current)),
+    team.accept(env.other, 'team', token(current)),
+  ]);
+  assert.equal(accepted.filter((x) => x.status === 'fulfilled').length, 1);
+  const directory = await team.list(env.other, space);
+  assert.equal(directory.members.length, 2);
+  assert.equal(directory.canManage, false);
+  assert.deepEqual(directory.invitations, []);
+  assert.equal(directory.members.find((m) => m.role === 'owner')?.email, env.owner.email);
+  const owned = await team.list(env.owner, space);
+  assert.equal(owned.invitations[0].email, address);
+  assert(!('token_hash' in owned.invitations[0]));
+  await assert.rejects(team.invite(env.owner, space, address, 'member'), failure(409));
+  await assert.rejects(team.invite(env.other, space, env.viewer.email, 'viewer'), failure(403));
+  await assert.rejects(app.upload(env.other, space, 'Denied', pdf), failure(403));
+  await team.change(env.owner, space, env.other.id, 'member');
+  const uploaded = await app.upload(env.other, space, 'Allowed', pdf);
+  await assert.rejects(team.change(env.other, space, env.owner.id, null), failure(403));
+  await assert.rejects(team.change(env.owner, space, env.owner.id, 'member'), failure(409));
+  await assert.rejects(team.change(env.owner, space, env.owner.id, null), failure(409));
+  await team.change(env.owner, space, env.other.id, null);
+  await assert.rejects(app.detail(env.other, space, uploaded.id), failure(404));
+  await assert.rejects(team.accept(env.other, 'team', token(current)), failure(403));
+  assert.equal(
+    (await app.spaces(env.other)).some((s) => s.id === space),
+    false,
+  );
 });
 test('isolates workspaces, enforces read-only roles and SQL row policies, and preserves migration history', async () => {
   const { id, d } = await draft();

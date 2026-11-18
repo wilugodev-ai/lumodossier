@@ -1,4 +1,7 @@
 import Link from 'next/link';
+import { Suspense } from 'react';
+import { HomeAccount } from '../components/HomeAccount';
+import { HomeActions } from '../components/HomeActions';
 import {
   Signature,
   LockKeyhole,
@@ -48,14 +51,7 @@ export default function Home() {
             <a href="#protection">Security</a>
             <a href="#touchlumo">Touchlumo</a>
           </nav>
-          <div className="nav-actions">
-            <Link className="text-link" href="/login">
-              Sign in
-            </Link>
-            <Link className="button small-btn" href="/login?mode=signup">
-              Get started
-            </Link>
-          </div>
+          <HomeActions />
         </div>
       </header>
       <main id="main">
@@ -81,7 +77,7 @@ export default function Home() {
                 workspace.
               </p>
               <div className="hero-actions">
-                <Link className="button" href="/login?mode=signup">
+                <Link className="button" href="/?account=signup">
                   <Signature size={19} />
                   Create a workspace
                 </Link>
@@ -197,12 +193,15 @@ export default function Home() {
                 customers, quotes and deals.
               </p>
             </div>
-            <Link className="button light" href="/login">
+            <Link className="button light" href="/dashboard">
               Open workspace
             </Link>
           </div>
         </section>
       </main>
+      <Suspense>
+        <HomeAccount />
+      </Suspense>
       <footer className="container footer">
         <Brand small />
         <span>Sign. Send. Keep everything moving.</span>

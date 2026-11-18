@@ -1,6 +1,7 @@
 import { Storage } from '@google-cloud/storage';
 import { createHash, createHmac } from 'node:crypto';
 import { ensure, Identity, Refs, Space, Problem } from './model';
+import { crmTeam, type CrmTeam } from './crm-team';
 
 export interface ObjectStore {
   put(key: string, data: Buffer, hash: string): Promise<void>;
@@ -14,6 +15,7 @@ export interface Auth {
   user(token: string): Promise<Identity>;
 }
 export interface Crm {
+  team?: CrmTeam;
   spaces(who: Identity): Promise<Space[]>;
   resolve(
     who: Identity,
@@ -124,6 +126,7 @@ export function serviceConfig(): Services {
     return res.json();
   }
   const crm: Crm = {
+    team: crmTeam(supabase, apiKey),
     async spaces(who) {
       const rows: { role: Space['role']; workspaces: { id: string; name: string } }[] = await records(
         who,

@@ -138,22 +138,28 @@ export class Repository {
     });
   }
   async spaces(who: Identity): Promise<Space[]> {
-    const local = await this.system(
-      async (tx) =>
-        (
-          await tx.query<Space>(
-            "select w.*,m.role from lumo.workspaces w join lumo.members m on m.workspace_id=w.id where m.user_id=$1 and w.source='standalone' order by w.name",
-            [who.id],
-          )
-        ).rows,
-    );
+    const local = await this.system(async (tx) => {
+      await tx.query(
+        'update lumo.members set email=$2,display_name=$3 where user_id=$1 and (email is distinct from $2 or display_name is distinct from $3)',
+        [who.id, who.email.trim().toLowerCase(), who.name],
+      );
+      return (
+        await tx.query<Space>(
+          "select w.*,m.role from lumo.workspaces w join lumo.members m on m.workspace_id=w.id where m.user_id=$1 and w.source='standalone' order by w.name",
+          [who.id],
+        )
+      ).rows;
+    });
     return [...local, ...((await this.services.crm?.spaces(who)) ?? [])];
   }
   async createSpace(who: Identity, name: string) {
     return this.system(async (tx) => {
       const key = randomUUID();
       await tx.query("insert into lumo.workspaces values($1,$2,'standalone')", [key, name]);
-      await tx.query("insert into lumo.members values($1,$2,'owner')", [key, who.id]);
+      await tx.query(
+        "insert into lumo.members(workspace_id,user_id,role,email,display_name) values($1,$2,'owner',$3,$4)",
+        [key, who.id, who.email.trim().toLowerCase(), who.name],
+      );
       return { id: key, name, role: 'owner', source: 'standalone' };
     });
   }

@@ -1,45 +1,76 @@
 'use client';
 import { useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { authClient, message } from '../lib/client';
 import { LockKeyhole } from 'lucide-react';
-export function AuthForm() {
+import { authClient, message } from '../lib/client';
+import { recordActivity } from '../lib/activity';
+import { PasswordField } from './Password';
+
+export function AuthForm({
+  initial = 'signin',
+  onSuccess,
+}: {
+  initial?: 'signin' | 'signup';
+  onSuccess?: (email: string) => void;
+}) {
   const query = useSearchParams(),
-    [signup, setSignup] = useState(query.get('mode') === 'signup'),
+    [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>(initial),
     [error, setError] = useState(''),
     [note, setNote] = useState(''),
     [busy, setBusy] = useState(false);
-  const target = query.get('next') || '/dashboard';
-  const next = /^\/(?:dashboard|touchlumo)(?:\?|$)/.test(target) ? target : '/dashboard';
-  async function submit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setBusy(true);
+  const signup = mode === 'signup',
+    forgot = mode === 'forgot';
+  function change(next: typeof mode) {
+    setMode(next);
     setError('');
     setNote('');
-    const form = new FormData(e.currentTarget);
+  }
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget),
+      email = String(form.get('email')).trim(),
+      password = String(form.get('password') ?? '');
+    setBusy(true);
+    setNote('');
+    setError('');
     try {
-      const client = authClient(),
-        email = String(form.get('email')).trim(),
-        password = String(form.get('password'));
-      if (signup) {
-        const result = await client.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { full_name: String(form.get('name')).trim() },
-            emailRedirectTo: location.origin + '/dashboard',
-          },
+      const client = authClient();
+      if (forgot) {
+        const result = await client.auth.resetPasswordForEmail(email, {
+          redirectTo: location.origin + '/?account=reset',
         });
         if (result.error) throw result.error;
-        if (!result.data.session) {
-          setNote('Check your email to confirm your LumoDossier account, then sign in.');
-          return;
-        }
-      } else {
-        const result = await client.auth.signInWithPassword({ email, password });
-        if (result.error) throw result.error;
+        setNote(
+          'If this email has an account, check its inbox for a password reset link. Open it in this browser.',
+        );
+        return;
       }
-      location.assign(next);
+      const result = signup
+        ? await client.auth.signUp({
+            email,
+            password,
+            options: {
+              data: { full_name: String(form.get('name')).trim() },
+              emailRedirectTo: location.origin + '/dashboard',
+            },
+          })
+        : await client.auth.signInWithPassword({ email, password });
+      if (result.error) throw result.error;
+      if (!result.data.session) {
+        setNote(
+          onSuccess
+            ? 'Confirm your email, then reopen your private team invitation.'
+            : 'Check your email to confirm your LumoDossier account, then sign in.',
+        );
+        return;
+      }
+      recordActivity(result.data.session.user.id);
+      if (onSuccess) {
+        onSuccess(result.data.session.user.email ?? email);
+        return;
+      }
+      const target = query.get('next') ?? '';
+      location.assign(/^\/(?:dashboard|touchlumo)(?:\?|$)/.test(target) ? target : '/dashboard');
     } catch (e) {
       setError(message(e));
     } finally {
@@ -49,42 +80,39 @@ export function AuthForm() {
   return (
     <div className="auth-card">
       <span className="eyebrow">
-        <LockKeyhole size={16} />
-        Sender workspace
+        <LockKeyhole size={15} />
+        {onSuccess ? 'Team invitation' : 'Sender workspace'}
       </span>
-      <h1>{signup ? 'Create an account' : 'Welcome back.'}</h1>
+      <h2>{forgot ? 'Reset your password' : signup ? 'Create an account' : 'Welcome back.'}</h2>
       <p>
-        {signup
-          ? 'Prepare and track signature requests in your own workspace.'
-          : 'Sign in to your LumoDossier workspace.'}
+        {forgot
+          ? 'Enter the email address you use to sign in.'
+          : onSuccess
+            ? 'Use the email address on your invitation.'
+            : signup
+              ? 'Prepare and track signature requests in your own workspace.'
+              : 'Sign in to your LumoDossier workspace.'}
       </p>
+      {query.get('idle') === '1' && mode === 'signin' && (
+        <p className="notice">Your session ended after 30 minutes of inactivity.</p>
+      )}
       {process.env.NEXT_PUBLIC_LOCAL_PREVIEW === 'true' && (
-        <p className="notice">
-          Local test workspace. Use a disposable email and sample documents. Email invitations use manual
-          sharing.
+        <p className="preview-note">
+          Local preview. Use a disposable email and sample documents. Email delivery is disabled.
         </p>
       )}
       <form onSubmit={submit}>
         {signup && (
           <label>
             Full name
-            <input autoComplete="name" name="name" maxLength={120} required />
+            <input name="name" autoComplete="name" maxLength={120} required />
           </label>
         )}
         <label>
           Email address
-          <input name="email" type="email" autoComplete="email" required />
+          <input name="email" type="email" autoComplete="email" maxLength={254} required />
         </label>
-        <label>
-          Password
-          <input
-            name="password"
-            type="password"
-            autoComplete={signup ? 'new-password' : 'current-password'}
-            minLength={signup ? 8 : 1}
-            required
-          />
-        </label>
+        {!forgot && <PasswordField label="Password" name="password" existing={!signup} />}
         {error && (
           <p role="alert" className="notice error">
             {error}
@@ -96,22 +124,23 @@ export function AuthForm() {
           </p>
         )}
         <button className="button full" disabled={busy}>
-          {busy ? 'Please wait…' : signup ? 'Create account' : 'Sign in'}
+          {busy ? 'Please wait…' : forgot ? 'Send reset link' : signup ? 'Create account' : 'Sign in'}
         </button>
       </form>
-      <p className="auth-switch">
-        {signup ? 'Already have an account?' : 'New to LumoDossier?'}{' '}
+      <div className="account-links">
         <button
+          type="button"
           className="link-button"
-          onClick={() => {
-            setSignup(!signup);
-            setError('');
-            setNote('');
-          }}
+          onClick={() => change(signup || forgot ? 'signin' : 'signup')}
         >
-          {signup ? 'Sign in' : 'Create an account'}
+          {signup || forgot ? 'Back to sign in' : 'Create an account'}
         </button>
-      </p>
+        {mode === 'signin' && (
+          <button type="button" className="link-button" onClick={() => change('forgot')}>
+            Forgot password?
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -17,6 +17,9 @@ function invoke(args) {
     });
   });
 }
-await invoke(['scripts/pdf-assets.mjs']);
-await invoke([next, 'build', '--webpack']);
-await invoke([next, 'start', '--hostname', '127.0.0.1', '--port', '3029']);
+if (process.argv.includes('--build')) {
+  await invoke(['scripts/pdf-assets.mjs']);
+  await invoke([next, 'build', '--webpack']);
+} else {
+  await invoke([next, 'start', '--hostname', '127.0.0.1', '--port', '3029']);
+}

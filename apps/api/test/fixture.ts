@@ -1,5 +1,7 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { spawn } from 'node:child_process';
 import { access, mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve, relative, isAbsolute } from 'node:path';
 import { createServer } from 'node:net';
@@ -12,12 +14,51 @@ import type { Services } from '../src/providers';
 
 export async function unusedPort() {
   const server = createServer();
-  await new Promise<void>((ok) => server.listen(0, '127.0.0.1', ok));
+  await new Promise<void>((ok, fail) => {
+    server.once('error', fail);
+    server.listen(0, '127.0.0.1', ok);
+  });
   const a = server.address();
   if (!a || typeof a === 'string') throw Error('No local port.');
   await new Promise<void>((ok, fail) => server.close((e) => (e ? fail(e) : ok())));
   return a.port;
 }
+
+// embedded-postgres uses taskkill /F /T on Windows. Its postmaster can exit
+// before its I/O workers, which races the next start of the same data directory.
+function windowsCluster(root: string, port: number) {
+  const fromEmbedded = createRequire(require.resolve('embedded-postgres'));
+  const { pg_ctl } = fromEmbedded('@embedded-postgres/windows-x64') as { pg_ctl: string };
+  const data = join(root, 'db');
+  const run = (args: string[]) =>
+    new Promise<void>((ok, fail) => {
+      // Windows can pass pg_ctl's pipe handles to the long-running postmaster.
+      // Wait for the controller's exit, independently of the daemon's lifetime.
+      const child = spawn(pg_ctl, [...args, '-D', data, '-w', '-t', '60'], {
+        windowsHide: true,
+        stdio: 'ignore',
+        timeout: 70_000,
+      });
+      child.once('error', fail);
+      child.once('exit', (code) => {
+        if (code === 0) ok();
+        else fail(new Error(`The local PostgreSQL ${args[0]} command failed (exit ${code}).`));
+      });
+    });
+  let started = false;
+  return {
+    async start() {
+      await run(['start', '-l', join(root, 'postgres.log'), '-o', '-h 127.0.0.1 -p ' + port]);
+      started = true;
+    },
+    async stop() {
+      if (!started) return;
+      await run(['stop', '-m', 'fast']);
+      started = false;
+    },
+  };
+}
+
 export async function fixture(persistentRoot?: string) {
   const root = persistentRoot ?? (await mkdtemp(join(tmpdir(), 'lumodossier-test-')));
   const port = persistentRoot ? 54409 : await unusedPort();
@@ -36,7 +77,7 @@ export async function fixture(persistentRoot?: string) {
     }
   }
   const { password } = settings;
-  const cluster = new EmbeddedPostgres({
+  const embedded = new EmbeddedPostgres({
     databaseDir: join(root, 'db'),
     port,
     user: 'postgres',
@@ -51,10 +92,17 @@ export async function fixture(persistentRoot?: string) {
     () => true,
     () => false,
   );
-  if (!exists) await cluster.initialise();
-  await cluster.start();
+  if (!exists) await embedded.initialise();
+  const cluster = process.platform === 'win32' ? windowsCluster(root, port) : embedded;
   const db = postgres(url);
-  await migrate(db);
+  try {
+    await cluster.start();
+    await migrate(db);
+  } catch (error) {
+    await db.close();
+    await cluster.stop();
+    throw error;
+  }
   const identity = (name: string): Identity => ({
     id: randomUUID(),
     name,

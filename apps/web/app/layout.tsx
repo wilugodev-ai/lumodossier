@@ -7,6 +7,7 @@ import '@fontsource/instrument-serif/latin-400.css';
 import '@fontsource/instrument-serif/latin-400-italic.css';
 import './styles.css';
 import './atmosphere.css';
+import './account.css';
 import { MotionProvider } from '../components/Motion';
 
 export const metadata: Metadata = {

@@ -54,7 +54,7 @@ export async function authDouble(port: number) {
   const server = createServer(async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', web);
     res.setHeader('Access-Control-Allow-Headers', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,OPTIONS');
     res.setHeader('Content-Type', 'application/json');
     const out = (status: number, body: unknown) => {
       res.statusCode = status;
@@ -108,8 +108,17 @@ export async function authDouble(port: number) {
       if (u.pathname === '/auth/v1/user') {
         const email = tokens.get((req.headers.authorization ?? '').slice(7)),
           a = accounts.get(email ?? '');
+        if (a && req.method === 'PUT') {
+          const data = await json(req);
+          if (typeof data.password !== 'string' || data.password.length < 8)
+            return out(400, { msg: 'Enter a password of at least eight characters.' });
+          a.salt = randomBytes(16);
+          a.password = scryptSync(data.password, a.salt, 32);
+        }
         return a ? out(200, a.user) : out(401, { msg: 'Invalid token.' });
       }
+      if (u.pathname === '/auth/v1/recover')
+        return out(503, { msg: 'Email delivery is disabled in the local test environment.' });
       if (u.pathname === '/auth/v1/logout') return out(200, {});
       out(404, { msg: 'Unknown test endpoint.' });
     } catch {

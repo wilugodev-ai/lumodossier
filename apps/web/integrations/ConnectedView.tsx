@@ -1,21 +1,20 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { access, authClient, message, sender } from '../lib/client';
+import { access, message, sender } from '../lib/client';
+import { useSenderSession } from '../lib/use-sender-session';
 import type { Refs, Workspace } from '../lib/types';
 import { TouchlumoDocuments } from './TouchlumoDocuments';
 export function ConnectedView() {
   const params = useSearchParams(),
+    { user, error: sessionError } = useSenderSession(),
     id = params.get('workspace'),
     [workspace, setWorkspace] = useState<Workspace | null>(null),
     [error, setError] = useState('');
   useEffect(() => {
+    if (!user) return;
     let active = true;
     (async () => {
-      if (!(await authClient().auth.getSession()).data.session) {
-        location.assign('/login?next=' + encodeURIComponent(location.pathname + location.search));
-        return;
-      }
       const w = (await sender<Workspace[]>('/workspaces')).find(
         (w) => w.source === 'touchlumo' && w.id === id,
       );
@@ -27,16 +26,16 @@ export function ConnectedView() {
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, user]);
   const crm: Refs = {};
   for (const k of ['customer', 'quote', 'deal'] as const) {
     const v = params.get(k);
     if (v) crm[k] = v;
   }
-  if (error)
+  if (error || sessionError)
     return (
       <p role="alert" className="notice error">
-        {error}
+        {error || sessionError}
       </p>
     );
   if (!workspace) return <p>Loading connected workspace…</p>;

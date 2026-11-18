@@ -1,4 +1,4 @@
-import { fixture } from '../fixture';
+import { fixture, unusedPort } from '../fixture';
 import { authDouble } from './auth-double';
 import { startRealAuth } from '../real-auth';
 import { httpServer } from '../../src/http';
@@ -18,10 +18,11 @@ export async function startEnvironment(preview = false) {
   const web = 'http://127.0.0.1:' + webPort,
     authOrigin = 'http://127.0.0.1:' + authPort;
   const f = await fixture(preview ? resolve(__dirname, '../../../../.local/preview') : undefined);
+  const smtpPort = !preview && process.env.LUMO_GOTRUE_BINARY ? await unusedPort() : 1;
   let closeAuth: (() => Promise<void>) | undefined;
   try {
     if (process.env.LUMO_GOTRUE_BINARY) {
-      const auth = await startRealAuth(f.url, web, authPort);
+      const auth = await startRealAuth(f.url, web, authPort, smtpPort);
       closeAuth = auth.stop;
     } else {
       const auth = await authDouble(authPort);
@@ -61,6 +62,7 @@ export async function startEnvironment(preview = false) {
         NEXT_PUBLIC_SUPABASE_URL: authOrigin,
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'local-test-publishable-key',
         NEXT_TELEMETRY_DISABLED: '1',
+        LUMO_TEST_SMTP_PORT: String(smtpPort),
       },
       async close() {
         running = false;

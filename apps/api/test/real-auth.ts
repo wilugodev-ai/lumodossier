@@ -17,7 +17,12 @@ import { unusedPort } from './fixture';
  * `go build -trimpath -o gotrue.exe .`. This tag uses a portable listener.
  * LUMO_GOTRUE_BINARY may also point to a native Linux or macOS executable.
  */
-export async function startRealAuth(databaseUrl: string, siteOrigin: string, proxyPort = 0) {
+export async function startRealAuth(
+  databaseUrl: string,
+  siteOrigin: string,
+  proxyPort = 0,
+  smtpPort = 1,
+) {
   const binary = process.env.LUMO_GOTRUE_BINARY;
   if (!binary) throw new Error('Set LUMO_GOTRUE_BINARY to a local Supabase Auth executable.');
   const connection = new URL(databaseUrl);
@@ -103,11 +108,13 @@ export async function startRealAuth(databaseUrl: string, siteOrigin: string, pro
       PORT: String(port),
       API_EXTERNAL_URL: url + '/auth/v1',
       GOTRUE_SITE_URL: site.origin,
-      GOTRUE_URI_ALLOW_LIST: site.origin + '/dashboard',
+      GOTRUE_URI_ALLOW_LIST: site.origin + '/dashboard,' + site.origin + '/?account=reset',
       GOTRUE_EXTERNAL_EMAIL_ENABLED: 'true',
       GOTRUE_MAILER_AUTOCONFIRM: 'true',
       GOTRUE_SMTP_HOST: '127.0.0.1',
-      GOTRUE_SMTP_PORT: '1',
+      GOTRUE_SMTP_PORT: String(smtpPort),
+      GOTRUE_SMTP_ADMIN_EMAIL: 'accounts@example.invalid',
+      GOTRUE_MAILER_URLPATHS_RECOVERY: '/auth/v1/verify',
       GOTRUE_JWT_SECRET: randomBytes(48).toString('hex'),
       GOTRUE_JWT_EXP: '3600',
       GOTRUE_JWT_AUD: 'authenticated',
