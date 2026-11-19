@@ -7,7 +7,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 async function main() {
   const services = serviceConfig(),
     db = postgres(needed('DATABASE_URL'));
-  const app = await httpServer(db, services, process.env.CRM_ORIGIN);
+  const app = await httpServer(db, services, process.env.CRM_ORIGIN, process.env.PREVIOUS_WEB_ORIGIN);
   await app.listen(Number(process.env.PORT || 4000), '0.0.0.0');
   let stopping = false;
   const shutdown = () => {

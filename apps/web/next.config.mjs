@@ -11,6 +11,16 @@ const config = {
         outputFileTracingRoot: fileURLToPath(new URL('../../', import.meta.url)),
       }
     : {}),
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www\\.lumodossier\\.com' }],
+        destination: 'https://lumodossier.com/:path*',
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

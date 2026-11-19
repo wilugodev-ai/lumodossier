@@ -299,7 +299,11 @@ class Api {
     return output(res, k, await this.app.recipientFile(await this.publicToken(req), types.parse(k)));
   }
 }
-export async function httpServer(db: Database, services: Services, crmOrigin?: string) {
+export async function httpServer(
+  db: Database,
+  services: Services,
+  ...additionalOrigins: (string | undefined)[]
+) {
   @Module({
     controllers: [Api],
     providers: [
@@ -324,7 +328,10 @@ export async function httpServer(db: Database, services: Services, crmOrigin?: s
     next();
   });
   app.enableCors({
-    origin: [services.webOrigin, ...(crmOrigin ? [new URL(crmOrigin).origin] : [])],
+    origin: [
+      services.webOrigin,
+      ...additionalOrigins.flatMap((value) => (value ? [new URL(value).origin] : [])),
+    ],
     allowedHeaders: ['Authorization', 'Content-Type', 'X-Document-Title', 'X-CRM-References'],
     methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
     credentials: false,

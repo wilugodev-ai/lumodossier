@@ -8,6 +8,8 @@ LumoDossier is an electronic-signature workspace for business PDFs. The public h
 
 ![Animated LumoDossier signing workspace](docs/images/lumodossier-motion.webp)
 
+[View the high-resolution agreement and lock](docs/images/agreement-detail.png)
+
 ## Run with your own isolated services
 
 Use Node 24.19.x and pnpm 12.5.1. The hosted design uses Supabase PostgreSQL 15 or later, Supabase Auth and a private Google Cloud Storage bucket. Set up the database login, bucket permissions and email provider for your environment. [Google Cloud deployment guide](docs/google-cloud.md)
@@ -66,4 +68,4 @@ pnpm test:e2e
 - [PDF libraries, fonts, licenses and placement verification](docs/pdf.md)
 - [Checks performed and test environment boundaries](docs/verification.md)
 
-The planned custom domain is `lumodossier.com`. The Google testing deployment uses the Cloud Run address above.
+The custom domain is `lumodossier.com`. The Google-generated address above also gives access to the standalone service. [Custom domain setup](docs/google-cloud.md#custom-domain)

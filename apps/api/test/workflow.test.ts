@@ -330,13 +330,26 @@ test('CRM adapter checks membership and references and sees the same authoritati
   }
 });
 test('HTTP API rejects missing authentication, foreign downloads, bad media and invalid recipient tokens', async () => {
-  const server = await httpServer(env.db, env.services),
+  const previousOrigin = 'https://previous.example.test';
+  const crmOrigin = 'https://crm.example.test';
+  const server = await httpServer(env.db, env.services, crmOrigin, previousOrigin),
     port = await unusedPort();
   await server.listen(port, '127.0.0.1');
   const base = 'http://127.0.0.1:' + port;
   try {
     assert.equal((await fetch(base + '/health')).status, 200);
     assert.equal((await fetch(base + '/v1/workspaces')).status, 401);
+    const corsOrigin = async (origin: string) =>
+      (
+        await fetch(base + '/v1/workspaces', {
+          method: 'OPTIONS',
+          headers: { Origin: origin, 'Access-Control-Request-Method': 'GET' },
+        })
+      ).headers.get('Access-Control-Allow-Origin');
+    for (const origin of [env.services.webOrigin, previousOrigin, crmOrigin]) {
+      assert.equal(await corsOrigin(origin), origin);
+    }
+    assert.equal(await corsOrigin(previousOrigin + '.other.test'), null);
     assert.equal(
       (
         await fetch(base + '/v1/workspaces/' + w + '/documents', {

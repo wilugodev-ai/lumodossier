@@ -42,8 +42,8 @@ function solid(T: Three, shape: Shape, depth: number, bevel: number, material: M
     bevelEnabled: true,
     bevelThickness: bevel,
     bevelSize: bevel,
-    bevelSegments: 3,
-    curveSegments: 12,
+    bevelSegments: 5,
+    curveSegments: 20,
   });
   return new T.Mesh(geometry, material);
 }
@@ -88,42 +88,45 @@ function studioLight(T: Three, renderer: InstanceType<Three['WebGLRenderer']>) {
   return environment;
 }
 
-function canvas(width: number, height: number) {
+function canvas(width: number, height: number, scale = 1) {
   const image = document.createElement('canvas');
-  image.width = width;
-  image.height = height;
+  image.width = Math.round(width * scale);
+  image.height = Math.round(height * scale);
   const context = image.getContext('2d');
   if (!context) throw new Error('Canvas rendering is unavailable');
+  context.scale(image.width / width, image.height / height);
   return { image, context };
 }
 
-function ink(T: Three, shape: Shape) {
-  const { image, context: c } = canvas(882, 1200);
-  const finish = c.createLinearGradient(0, 40, image.width, 1080);
+function ink(T: Three, shape: Shape, anisotropy: number) {
+  const width = 882;
+  const height = 1200;
+  const { image, context: c } = canvas(width, height, 2048 / height);
+  const finish = c.createLinearGradient(0, 40, width, 1080);
   finish.addColorStop(0, '#a7c5cf');
   finish.addColorStop(0.18, '#e1eff0');
   finish.addColorStop(0.42, '#c8dae0');
   finish.addColorStop(0.69, '#98b9c5');
   finish.addColorStop(1, '#d5e9e9');
   c.fillStyle = finish;
-  c.fillRect(0, 0, image.width, image.height);
+  c.fillRect(0, 0, width, height);
   // Fine directional brushing, like a satin finish on a display model.
-  for (let y = 0; y < image.height; y += 3) {
+  for (let y = 0; y < height; y += 3) {
     c.fillStyle = `rgba(44,88,101,${0.009 + (Math.sin(y * 0.473) + 1) * 0.01})`;
-    c.fillRect(0, y, image.width, 1);
+    c.fillRect(0, y, width, 1);
   }
-  c.fillStyle = '#204655';
-  c.font = '600 22px monospace';
+  c.fillStyle = '#102b38';
+  c.font = '700 28px monospace';
   c.fillText('DOCUMENT  /  SIGNING COPY', 75, 138);
-  c.font = '500 98px Georgia, serif';
+  c.font = '400 108px Georgia, serif';
   c.fillText('Agreement', 67, 281);
   const rule = (x: number, y: number, length: number, height = 4) => c.fillRect(x, y, length, height);
   rule(73, 322, 730);
-  c.font = '600 21px monospace';
+  c.font = '700 29px monospace';
   c.fillText('01  PARTIES', 74, 389);
   c.fillText('02  TERMS', 74, 605);
   c.fillText('SIGNATURE', 74, 760);
-  c.fillStyle = '#557582';
+  c.fillStyle = '#476572';
   for (const [y, length] of [
     [429, 600],
     [453, 684],
@@ -135,11 +138,12 @@ function ink(T: Three, shape: Shape) {
     rule(75, y, length, 5);
   }
   rule(74, 1091, 730, 2);
-  c.font = '600 17px monospace';
+  c.font = '700 21px monospace';
   c.fillText('ELECTRONIC DOCUMENT', 74, 1132);
   c.fillText('01 / 01', 702, 1132);
   const map = new T.CanvasTexture(image);
   map.colorSpace = T.SRGBColorSpace;
+  map.anisotropy = anisotropy;
   const geometry = new T.ShapeGeometry(shape);
   const uv = geometry.attributes.uv;
   const vertices = geometry.attributes.position;
@@ -150,9 +154,9 @@ function ink(T: Three, shape: Shape) {
     geometry,
     new T.MeshPhysicalMaterial({
       map,
-      metalness: 0.32,
-      roughness: 0.42,
-      clearcoat: 0.46,
+      metalness: 0.14,
+      roughness: 0.53,
+      clearcoat: 0.18,
       clearcoatRoughness: 0.27,
       polygonOffset: true,
       polygonOffsetFactor: -1,
@@ -162,43 +166,43 @@ function ink(T: Three, shape: Shape) {
   return mesh;
 }
 
-function signedInset(T: Three) {
-  // Sample the pen stroke into the panel itself. Its recessed slopes catch the light as it turns.
-  const { image, context } = canvas(660, 180);
-  context.translate(9, 4);
-  context.scale(1.5, 1);
-  context.strokeStyle = '#fff';
-  context.lineWidth = 5.5;
-  context.lineCap = 'round';
-  context.lineJoin = 'round';
-  context.stroke(new Path2D(signature));
-  const pixels = context.getImageData(0, 0, image.width, image.height).data;
-  const geometry = new T.PlaneGeometry(field.width + 0.013, field.height + 0.013, 264, 72);
-  const points = geometry.attributes.position;
-  const uv = geometry.attributes.uv;
-  const base = new T.Color('#315a68');
-  const silver = new T.Color('#d3fcff');
-  const color = new T.Color();
-  const colors: number[] = [];
-  for (let i = 0; i < points.count; i++) {
-    const x = Math.round(uv.getX(i) * (image.width - 1));
-    const y = Math.round((1 - uv.getY(i)) * (image.height - 1));
-    const depth = pixels[(y * image.width + x) * 4 + 3] / 255;
-    points.setZ(i, -depth * 0.023);
-    color.copy(base).lerp(silver, depth);
-    colors.push(color.r, color.g, color.b);
+function signedInset(T: Three, anisotropy: number) {
+  const width = 660;
+  const height = 180;
+  const pen = new Path2D(signature);
+  function signatureTexture(background: string, stroke: string) {
+    const { image, context } = canvas(width, height, 2);
+    context.fillStyle = background;
+    context.fillRect(0, 0, width, height);
+    context.translate(9, 4);
+    context.scale(1.5, 1);
+    context.strokeStyle = stroke;
+    context.lineWidth = 5.5;
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+    context.stroke(pen);
+    const texture = new T.CanvasTexture(image);
+    texture.anisotropy = anisotropy;
+    return texture;
   }
-  geometry.setAttribute('color', new T.Float32BufferAttribute(colors, 3));
-  geometry.computeVertexNormals();
+  const map = signatureTexture('#264755', '#d4fbf5');
+  map.colorSpace = T.SRGBColorSpace;
+  // The panel sits behind the cutout. A height map engraves the same smooth pen path.
   const inset = new T.Mesh(
-    geometry,
-    new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.31, metalness: 0.43 }),
+    new T.PlaneGeometry(field.width + 0.013, field.height + 0.013),
+    new T.MeshStandardMaterial({
+      map,
+      bumpMap: signatureTexture('#000', '#fff'),
+      bumpScale: -0.012,
+      roughness: 0.34,
+      metalness: 0.35,
+    }),
   );
   inset.position.set(field.x, field.y, faceDepth - 0.004);
   return inset;
 }
 
-function documentModel(T: Three) {
+function documentModel(T: Three, anisotropy: number) {
   const stack = new T.Group();
   const steel = new T.MeshPhysicalMaterial({
     color: '#94b8ce',
@@ -247,7 +251,11 @@ function documentModel(T: Three) {
       .reverse(),
   );
   shape.holes.push(hole);
-  stack.add(solid(T, shape, faceDepth, 0.019, [satin, steel]), ink(T, shape), signedInset(T));
+  stack.add(
+    solid(T, shape, faceDepth, 0.019, [satin, steel]),
+    ink(T, shape, anisotropy),
+    signedInset(T, anisotropy),
+  );
 
   const fold = new T.BufferGeometry();
   fold.setAttribute(
@@ -298,7 +306,7 @@ function lockModel(T: Three) {
   );
   shackle.add(new T.CubicBezierCurve3(v(0, 0.73 + r), v(bend, 0.73 + r), v(r, 0.73 + bend), v(r, 0.73)));
   shackle.add(new T.LineCurve3(v(r, 0.73), v(r, 0.245)));
-  const handle = new T.Mesh(new T.TubeGeometry(shackle, 72, 0.106, 20, false), chrome);
+  const handle = new T.Mesh(new T.TubeGeometry(shackle, 112, 0.106, 32, false), chrome);
   handle.position.z = 0.13;
   lock.add(handle);
   const housing = solid(T, outline(T, 1.13, 0.89, 0.14), 0.31, 0.056, [teal, chrome]);
@@ -316,7 +324,7 @@ function lockModel(T: Three) {
   const well = new T.Mesh(new T.PlaneGeometry(0.35, 0.46), dark);
   well.position.z = 0.369;
   lock.add(well);
-  const bezel = new T.Mesh(new T.TorusGeometry(0.255, 0.016, 10, 80), rim);
+  const bezel = new T.Mesh(new T.TorusGeometry(0.255, 0.016, 16, 112), rim);
   bezel.position.z = 0.43;
   lock.add(bezel);
   const rivet = new T.SphereGeometry(0.024, 10, 6);
@@ -442,7 +450,7 @@ function makeScene(T: Three, root: HTMLDivElement, screen: HTMLDivElement, initi
   const keyLight = new T.DirectionalLight('#f2f8ff', 2.0);
   keyLight.position.set(-3, 4, 6);
   keyLight.castShadow = true;
-  keyLight.shadow.mapSize.set(1024, 1024);
+  keyLight.shadow.mapSize.set(2048, 2048);
   Object.assign(keyLight.shadow.camera, {
     left: -3.25,
     right: 3.25,
@@ -458,7 +466,7 @@ function makeScene(T: Three, root: HTMLDivElement, screen: HTMLDivElement, initi
   sideLight.position.set(4, 0.7, -1);
   stage.add(sideLight);
   const focus = new T.Group();
-  const dossier = documentModel(T);
+  const dossier = documentModel(T, Math.min(8, renderer.capabilities.getMaxAnisotropy()));
   dossier.add(lockModel(T));
   dossier.traverse((object) => {
     if (object instanceof T.Mesh) {
@@ -531,8 +539,14 @@ function makeScene(T: Three, root: HTMLDivElement, screen: HTMLDivElement, initi
     camera.updateProjectionMatrix();
     focus.position.set(-0.12, 0.03, 0);
     root.dataset.centered = String(centered);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.65, 2100 / width));
-    renderer.setSize(width, height, false);
+    // Supersample 1x screens and preserve Retina detail within a bounded GPU buffer.
+    const density = Math.min(
+      Math.max(1.5, window.devicePixelRatio || 1),
+      3,
+      Math.sqrt(8_294_400 / (width * height)),
+      renderer.capabilities.maxTextureSize / Math.max(width, height),
+    );
+    renderer.setDrawingBufferSize(width, height, density);
     sync();
   };
   const move = (event: PointerEvent) => {

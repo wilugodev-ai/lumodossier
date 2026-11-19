@@ -103,6 +103,12 @@ async function fillRecipient(
 test('one home screen fits desktop and mobile and opens both account dialogs', async ({
   page,
 }, info) => {
+  const alias = await page.request.get('/sign?view=receipt', {
+    headers: { Host: 'www.lumodossier.com' },
+    maxRedirects: 0,
+  });
+  expect(alias.status()).toBe(308);
+  expect(alias.headers().location).toBe('https://lumodossier.com/sign?view=receipt');
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sign. Send.Keep everythingmoving.');
   await page.evaluate(() => document.fonts.ready);

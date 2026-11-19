@@ -43,6 +43,12 @@ The web build embeds the public API origin, Supabase URL and publishable key. Th
 
 Run `pnpm migrate` against the isolated database with a schema-owner connection before deploying a revision that needs new migrations. Preserve the link secret across updates so issued invitations and pending email jobs continue working. The API can process work while handling requests. The scheduled job also drains the durable queue when the API has scaled to zero. [Schedule a Cloud Run job](https://docs.cloud.google.com/run/docs/execute/jobs-on-schedule)
 
+## Custom domain
+
+Hostinger manages DNS for `lumodossier.com`. The regional Cloud Run mappings for the apex and `www.lumodossier.com` target `lumodossier-web`. The website redirects `www` to the apex and preserves the path and query. Browser signing links keep the invitation token in the URL fragment.
+
+Use the DNS records reported by the two mappings in the Google project. Once HTTPS on the apex serves the LumoDossier home page and `/health`, set `WEB_ORIGIN=https://lumodossier.com` on the API and worker. Set `PREVIOUS_WEB_ORIGIN` on the API to the original public Cloud Run web origin so already-issued private links can still access their document. In Supabase Auth, set the Site URL to the apex and allow the dashboard and password recovery URLs on both origins. [Cloud Run domain mapping](https://docs.cloud.google.com/run/docs/mapping-custom-domains)
+
 ## Accounts, invitations and Touchlumo
 
 Supabase Auth has email confirmation enabled. Its site URL is the public Cloud Run web origin, with the dashboard and password recovery URLs allowed. Supabase's default email service sends account messages to project team addresses. Configure a verified sender in Supabase Auth SMTP to open public registration and password recovery to other addresses. [Supabase Auth SMTP](https://supabase.com/docs/guides/auth/auth-smtp)
