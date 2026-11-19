@@ -37,11 +37,29 @@ async function share(page: Page, name: string) {
   await page.getByRole('button', { name: 'Hide link' }).click();
   return url;
 }
-async function fillRecipient(browser: Browser, url: string, name: string, draw = false) {
+async function fillRecipient(
+  browser: Browser,
+  url: string,
+  name: string,
+  {
+    draw = false,
+    reference = false,
+    screenshot,
+  }: { draw?: boolean; reference?: boolean; screenshot?: string } = {},
+) {
   const context = await browser.newContext(),
     p = await context.newPage();
   await p.goto(url);
   await expect(p.getByRole('heading', { name: 'Your fields' })).toBeVisible();
+  const total = reference ? 2 : 1;
+  const confirm = p.getByRole('button', { name: 'Confirm and sign' });
+  await expect(p.getByText('0 of ' + total + ' required fields complete')).toBeVisible();
+  await p.getByRole('checkbox', { name: /I consent/ }).check();
+  await p.getByRole('checkbox', { name: /I have reviewed/ }).check();
+  await expect(confirm).toBeDisabled();
+  await p.getByRole('checkbox', { name: /I have reviewed/ }).uncheck();
+  await p.getByRole('button', { name: /Go to Signature on page/ }).click();
+  await expect(p.getByPlaceholder('Type your full name')).toBeFocused();
   if (draw) {
     await p.getByRole('button', { name: 'Draw', exact: true }).click();
     const pad = await p.getByRole('img', { name: 'Draw your signature here' }).boundingBox();
@@ -53,7 +71,27 @@ async function fillRecipient(browser: Browser, url: string, name: string, draw =
     await p.mouse.move(x + w * 0.55, y + h * 0.75, { steps: 8 });
     await p.mouse.move(x + w * 0.83, y + h * 0.38, { steps: 8 });
     await p.mouse.up();
-  } else await p.getByPlaceholder('Type your full name').fill(name);
+    await expect(p.locator('.sign-field.filled polyline').first()).toBeAttached();
+  } else {
+    await p.getByPlaceholder('Type your full name').fill('   ');
+    await expect(p.getByText('0 of ' + total + ' required fields complete')).toBeVisible();
+    await p.getByPlaceholder('Type your full name').fill(name);
+  }
+  if (reference) {
+    await expect(p.getByText('1 of 2 required fields complete')).toBeVisible();
+    if (screenshot) await p.screenshot({ path: screenshot });
+    await p.getByRole('button', { name: 'Go to Project reference on page 2' }).click();
+    const input = p.getByRole('textbox', { name: /Project reference/ });
+    await expect(input).toBeFocused();
+    await expect(p.getByText('Page 2 of 2', { exact: true })).toBeVisible();
+    await input.fill('Studio 17');
+    await input.clear();
+    await expect(p.getByText('1 of 2 required fields complete')).toBeVisible();
+    await input.fill('Studio 17');
+  }
+  await p.getByRole('button', { name: 'Review and sign', exact: true }).click();
+  await expect(p.getByRole('checkbox', { name: /I consent/ })).toBeFocused();
+  await expect(confirm).toBeDisabled();
   await p.getByRole('checkbox', { name: /I consent/ }).check();
   await p.getByRole('checkbox', { name: /I have reviewed/ }).check();
   await p.getByRole('button', { name: 'Confirm and sign' }).click();
@@ -251,15 +289,22 @@ test('disposable sender prepares, resumes and sends a PDF; two account-free reci
   await page.getByLabel('Top percent').fill('65');
   await page.getByRole('button', { name: 'Zoom in' }).click();
   await page.getByRole('button', { name: 'Next page' }).click();
+  await page.getByLabel('Field type').selectOption('text');
+  await page.getByRole('button', { name: 'Add field' }).click();
+  await page.getByLabel('Label', { exact: true }).fill('Project reference');
+  await page.getByLabel('Field type').selectOption('signature');
   await page.getByLabel('Assign to').selectOption({ label: 'Lin Vale' });
   await page.getByRole('button', { name: 'Add field' }).click();
   await page.getByRole('button', { name: 'Review request', exact: true }).click();
   await page.getByRole('button', { name: 'Send request', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Recipient progress' })).toBeVisible();
   await expect(page.locator('.track-person').first()).toContainText('Email not sent');
-  const first = await fillRecipient(browser, await share(page, 'Ada Hart'), 'Ada Hart');
+  const first = await fillRecipient(browser, await share(page, 'Ada Hart'), 'Ada Hart', {
+    reference: true,
+    screenshot: info.outputPath('guided-signing.png'),
+  });
   await expect(page.locator('.status')).toHaveText('Partially signed');
-  const second = await fillRecipient(browser, await share(page, 'Lin Vale'), 'Lin Vale', true);
+  const second = await fillRecipient(browser, await share(page, 'Lin Vale'), 'Lin Vale', { draw: true });
   await expect(second.p.getByRole('heading', { name: 'Your copy is ready.' })).toBeVisible();
   await expect(page.locator('.status')).toHaveText('Completed');
   await page.screenshot({ path: info.outputPath('completed-dashboard.png') });
@@ -267,6 +312,17 @@ test('disposable sender prepares, resumes and sends a PDF; two account-free reci
   await second.p.getByRole('button', { name: 'Download signed PDF' }).click();
   const bytes = await readFile((await (await copyEvent).path())!);
   expect(bytes.subarray(0, 5).toString()).toBe('%PDF-');
+  await expect(second.p.getByText('Signature recorded', { exact: true })).toBeVisible();
+  for (const room of [second.p, page]) {
+    await room.getByText('Verify a signed copy', { exact: true }).click();
+    const picker = room.getByLabel('Choose a signed PDF');
+    await picker.setInputFiles({ name: 'signed.pdf', mimeType: 'application/pdf', buffer: bytes });
+    await expect(room.getByText(/^Exact match\./)).toBeVisible();
+    const modified = Buffer.from(bytes);
+    modified[modified.length - 1] ^= 1;
+    await picker.setInputFiles({ name: 'signed.pdf', mimeType: 'application/pdf', buffer: modified });
+    await expect(room.getByText(/^Different file\./)).toBeVisible();
+  }
   const recordEvent = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Completion record' }).click();
   const record = JSON.parse(await readFile((await (await recordEvent).path())!, 'utf8'));

@@ -313,7 +313,8 @@ export async function httpServer(db: Database, services: Services, crmOrigin?: s
     bodyParser: false,
   });
   app.getHttpAdapter().getInstance().disable('x-powered-by');
-  if (process.env.RENDER === 'true') app.getHttpAdapter().getInstance().set('trust proxy', 1);
+  if (process.env.RENDER === 'true' || process.env.K_SERVICE)
+    app.getHttpAdapter().getInstance().set('trust proxy', 1);
   app.use((_req: Request, res: Response, next: () => void) => {
     res.set({
       'Cache-Control': 'private, no-store',

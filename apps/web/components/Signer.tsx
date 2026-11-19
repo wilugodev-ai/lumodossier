@@ -1,9 +1,11 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
-import { LockKeyhole, Download, Check, CheckCircle2, PenLine } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { LockKeyhole, Download, Check, CheckCircle2, PenLine, ArrowRight } from 'lucide-react';
 import { Brand } from './Brand';
 import { MotionControl } from './Motion';
 import { PdfPage } from './PdfPage';
+import { completedField } from '../lib/signing-fields';
+import { VerifyCopy } from './VerifyCopy';
 import { DrawSignature } from './DrawSignature';
 import { request, saveCopy, message, dateTime } from '../lib/client';
 import type { Field, SigningView, Value } from '../lib/types';
@@ -20,6 +22,18 @@ export function Signer() {
     [declining, setDeclining] = useState(false),
     [declined, setDeclined] = useState(false),
     [reason, setReason] = useState('');
+  const alternate = useRef<Record<string, Value | undefined>>({});
+  const fields = [...(view?.fields ?? [])].sort((a, b) => a.page - b.page || a.y - b.y || a.x - b.x);
+  const required = fields.filter((field) => field.required);
+  const pending = required.filter((field) => !completedField(field, values[field.id]));
+  const invalidDrawing = fields.find((field) => {
+    const value = values[field.id];
+    return (
+      value && typeof value === 'object' && value.strokes.length > 0 && !completedField(field, value)
+    );
+  });
+  const next = pending[0] ?? invalidDrawing;
+  const canSign = !next && consent && intent && !busy;
   const load = useCallback(async (t: string) => {
     const r = await request('/recipient/open', t, 'POST', {});
     setView(await r.json());
@@ -46,7 +60,7 @@ export function Signer() {
     document.getElementById('input-' + f.id)?.focus();
   }
   async function submit() {
-    if (!view) return;
+    if (!view || !canSign) return;
     setBusy(true);
     setError('');
     try {
@@ -121,7 +135,29 @@ export function Signer() {
           <section className="result panel">
             <CheckCircle2 size={40} />
             <h1>{view.completed ? 'Your copy is ready.' : 'Your signature is recorded.'}</h1>
-            <p>{view.title}</p>
+            <p className="receipt-title">{view.title}</p>
+            <dl className="signing-receipt">
+              <div>
+                <dt>Signed by</dt>
+                <dd>{view.recipient.name}</dd>
+              </div>
+              {view.signedAt && (
+                <div>
+                  <dt>Signature recorded</dt>
+                  <dd>
+                    <time dateTime={view.signedAt}>{dateTime(view.signedAt)}</time>
+                  </dd>
+                </div>
+              )}
+              {view.completedAt && (
+                <div>
+                  <dt>Agreement completed</dt>
+                  <dd>
+                    <time dateTime={view.completedAt}>{dateTime(view.completedAt)}</time>
+                  </dd>
+                </div>
+              )}
+            </dl>
             <p>
               {view.completed
                 ? 'Everyone has signed. Download the signed document and its completion record.'
@@ -138,6 +174,13 @@ export function Signer() {
                 </button>
               </div>
             )}
+            {view.completed && (
+              <VerifyCopy
+                recordPath="/recipient/files/record"
+                recipientToken={token}
+                requestId={view.requestId}
+              />
+            )}
           </section>
         ) : (
           <>
@@ -153,6 +196,25 @@ export function Signer() {
                 </p>
               </div>
             </div>
+            <section className="signing-guide" aria-label="Signing progress">
+              <div className="signing-progress">
+                <strong aria-live="polite">
+                  {required.length - pending.length} of {required.length} required fields complete
+                </strong>
+                <progress
+                  aria-label="Required fields completed"
+                  max={Math.max(1, required.length)}
+                  value={required.length - pending.length}
+                />
+              </div>
+              <button
+                className="button outline"
+                onClick={() => (next ? focus(next) : document.getElementById('review-consent')?.focus())}
+              >
+                {next ? 'Go to ' + next.label + ' on page ' + (next.page + 1) : 'Review and sign'}{' '}
+                <ArrowRight size={16} aria-hidden="true" />
+              </button>
+            </section>
             <div className="editor-layout signer-layout">
               <PdfPage
                 path="/recipient/files/original"
@@ -161,12 +223,18 @@ export function Signer() {
                 page={page}
                 onPage={setPage}
               >
-                {view.fields
+                {fields
                   .filter((f) => f.page === page)
                   .map((f) => (
                     <button
                       key={f.id}
-                      className="sign-field"
+                      className={'sign-field' + (completedField(f, values[f.id]) ? ' filled' : '')}
+                      aria-label={
+                        f.label +
+                        ', page ' +
+                        (f.page + 1) +
+                        (completedField(f, values[f.id]) ? ', complete' : '')
+                      }
                       onClick={() => focus(f)}
                       style={{
                         left: f.x * 100 + '%',
@@ -175,12 +243,26 @@ export function Signer() {
                         height: f.h * 100 + '%',
                       }}
                     >
-                      {typeof values[f.id] === 'string' ? (
-                        String(values[f.id])
-                      ) : values[f.id] ? (
+                      {!completedField(f, values[f.id]) ? (
+                        f.label
+                      ) : typeof values[f.id] === 'object' ? (
+                        <svg viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
+                          {(values[f.id] as { strokes: number[][][] }).strokes.map((stroke, index) => (
+                            <polyline
+                              key={index}
+                              points={stroke.map(([x, y]) => [400 * x, 120 * y].join(',')).join(' ')}
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.3"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          ))}
+                        </svg>
+                      ) : values[f.id] === true ? (
                         <Check size={14} />
                       ) : (
-                        f.label
+                        String(values[f.id])
                       )}
                     </button>
                   ))}
@@ -190,7 +272,7 @@ export function Signer() {
                 <p className="hint">
                   {view.recipient.name} · {view.recipient.email}
                 </p>
-                {view.fields.map((f) => (
+                {fields.map((f) => (
                   <div className="value-field" key={f.id}>
                     <label htmlFor={'input-' + f.id}>
                       {f.label}
@@ -203,8 +285,11 @@ export function Signer() {
                             key={v}
                             aria-pressed={!!draw[f.id] === !!i}
                             onClick={() => {
+                              if (!!draw[f.id] === !!i) return;
+                              const previous = values[f.id];
                               setDraw({ ...draw, [f.id]: !!i });
-                              set(f, i ? { strokes: [] } : '');
+                              set(f, alternate.current[f.id] ?? (i ? { strokes: [] } : ''));
+                              alternate.current[f.id] = previous;
                               setPage(f.page);
                             }}
                           >
@@ -215,6 +300,7 @@ export function Signer() {
                     )}
                     {draw[f.id] ? (
                       <DrawSignature
+                        id={'input-' + f.id}
                         strokes={
                           typeof values[f.id] === 'object'
                             ? (values[f.id] as { strokes: number[][][] }).strokes
@@ -226,6 +312,8 @@ export function Signer() {
                       <input
                         id={'input-' + f.id}
                         type="checkbox"
+                        onFocus={() => setPage(f.page)}
+                        aria-required={f.required}
                         checked={values[f.id] === true}
                         onChange={(e) => {
                           set(f, e.target.checked);
@@ -238,17 +326,23 @@ export function Signer() {
                         type={f.type === 'date' ? 'date' : 'text'}
                         placeholder={f.type === 'signature' ? 'Type your full name' : undefined}
                         maxLength={200}
+                        aria-required={f.required}
                         value={typeof values[f.id] === 'string' ? String(values[f.id]) : ''}
                         className={['signature', 'initials'].includes(f.type) ? 'signature-input' : ''}
                         onFocus={() => setPage(f.page)}
                         onChange={(e) => set(f, e.target.value)}
                       />
                     )}
+                    {invalidDrawing?.id === f.id && (
+                      <small>Draw a visible mark or clear the drawing.</small>
+                    )}
                   </div>
                 ))}
                 <p className="hint">* Required · Link expires {dateTime(view.expiresAt)}</p>
+                <h2 className="review-heading">Review and sign</h2>
                 <label className="check-line">
                   <input
+                    id="review-consent"
                     type="checkbox"
                     checked={consent}
                     onChange={(e) => setConsent(e.target.checked)}
@@ -263,7 +357,7 @@ export function Signer() {
                   />
                   {view.intent}
                 </label>
-                <button className="button full" disabled={!consent || !intent || busy} onClick={submit}>
+                <button className="button full" disabled={!canSign} onClick={submit}>
                   {busy ? 'Saving…' : 'Confirm and sign'}
                 </button>
                 {declining ? (

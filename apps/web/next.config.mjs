@@ -1,8 +1,16 @@
+import { fileURLToPath } from 'node:url';
+
 /** @type {import('next').NextConfig} */
 const config = {
   poweredByHeader: false,
   devIndicators: false,
   distDir: process.env.LUMO_NEXT_DIST_DIR || '.next',
+  ...(process.env.LUMO_STANDALONE === 'true'
+    ? {
+        output: 'standalone',
+        outputFileTracingRoot: fileURLToPath(new URL('../../', import.meta.url)),
+      }
+    : {}),
   async headers() {
     return [
       {

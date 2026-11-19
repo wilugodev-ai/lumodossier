@@ -77,6 +77,19 @@ export function AuthForm({
       setBusy(false);
     }
   }
+  if (
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    !process.env.NEXT_PUBLIC_API_ORIGIN
+  ) {
+    return (
+      <div className="auth-card">
+        <LockKeyhole aria-hidden="true" size={22} />
+        <h2>Workspace setup is in progress</h2>
+        <p>Account access will open here when the signing service is connected.</p>
+      </div>
+    );
+  }
   return (
     <div className="auth-card">
       <span className="eyebrow">

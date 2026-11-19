@@ -17,7 +17,12 @@ import { digest } from './providers';
 export class Signing extends Sender {
   async withLink<T>(
     token: string,
-    work: (tx: Sql, r: DocumentRow, p: Progress, purpose: string) => Promise<T>,
+    work: (
+      tx: Sql,
+      r: DocumentRow,
+      p: Progress,
+      invitation: { purpose: string; expires_at: Date },
+    ) => Promise<T>,
   ) {
     ensure(/^[A-Za-z0-9_-]{43}$/.test(token), 401, 'This link is invalid or has expired.');
     return this.system(async (tx) => {
@@ -28,9 +33,9 @@ export class Signing extends Sender {
       );
       ensure(lookup, 401, 'This link is invalid or has expired.');
       const r = await locked(tx, lookup.request_id);
-      const link = await one<{ person_id: string; purpose: string }>(
+      const link = await one<{ person_id: string; purpose: string; expires_at: Date }>(
         tx,
-        'select person_id,purpose from lumo.invitations where token_hash=$1 and revoked_at is null and expires_at>clock_timestamp()',
+        'select person_id,purpose,expires_at from lumo.invitations where token_hash=$1 and revoked_at is null and expires_at>clock_timestamp()',
         [digest(token)],
       );
       ensure(
@@ -47,11 +52,11 @@ export class Signing extends Sender {
         await openForSigning(tx, r);
         if (!p.signed_at) await assertTurn(tx, r, p.ordinal);
       }
-      return work(tx, r, p, link.purpose);
+      return work(tx, r, p, link);
     });
   }
   async recipient(token: string) {
-    return this.withLink(token, async (tx, r, p) => {
+    return this.withLink(token, async (tx, r, p, invitation) => {
       if (!p.viewed_at && !p.signed_at && !r.sealed_at) {
         await tx.query('update lumo.people set viewed_at=now() where request_id=$1 and id=$2', [
           r.id,
@@ -70,7 +75,9 @@ export class Signing extends Sender {
         recipient: { id: p.id, name: p.name, email: p.email },
         signed: Boolean(p.signed_at),
         completed: Boolean(r.completed_at),
-        expiresAt: r.expires_at,
+        signedAt: p.signed_at,
+        completedAt: r.completed_at,
+        expiresAt: invitation.expires_at,
         fields: r.fields.filter((f) => f.personId === p.id),
         consent: CONSENT,
         consentVersion: CONSENT_VERSION,
@@ -80,7 +87,7 @@ export class Signing extends Sender {
   }
   async sign(token: string, body: unknown) {
     const input = signSchema.parse(body);
-    return this.withLink(token, async (tx, r, p, purpose) => {
+    return this.withLink(token, async (tx, r, p, { purpose }) => {
       ensure(purpose === 'sign', 409, 'This link is for a completed copy.');
       const values = checkedValues(
         r.fields.filter((f) => f.personId === p.id),
@@ -128,7 +135,7 @@ export class Signing extends Sender {
     });
   }
   async decline(token: string, reason: string) {
-    return this.withLink(token, async (tx, r, p, purpose) => {
+    return this.withLink(token, async (tx, r, p, { purpose }) => {
       await openForSigning(tx, r);
       ensure(purpose === 'sign' && !p.signed_at, 409, 'This recipient has already finished.');
       await tx.query('update lumo.people set declined_at=now() where request_id=$1 and id=$2', [

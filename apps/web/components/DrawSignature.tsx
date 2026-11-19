@@ -1,13 +1,20 @@
 'use client';
 import { useRef, type PointerEvent } from 'react';
 export function DrawSignature({
+  id,
   strokes,
   onChange,
 }: {
+  id: string;
   strokes: number[][][];
   onChange: (v: number[][][]) => void;
 }) {
-  const active = useRef<{ pointer: number; points: number[][]; previous: number[][][] } | null>(null);
+  const active = useRef<{
+    pointer: number;
+    points: number[][];
+    previous: number[][][];
+    remainingPoints: number;
+  } | null>(null);
   function point(e: PointerEvent<SVGSVGElement>) {
     const box = e.currentTarget.getBoundingClientRect();
     return [
@@ -16,19 +23,22 @@ export function DrawSignature({
     ];
   }
   function down(e: PointerEvent<SVGSVGElement>) {
-    if (active.current || strokes.length >= 50) return;
+    const remainingPoints = 6000 - strokes.reduce((n, stroke) => n + stroke.length, 0);
+    if (active.current || strokes.length >= 50 || remainingPoints < 2) return;
     e.currentTarget.setPointerCapture(e.pointerId);
-    active.current = { pointer: e.pointerId, points: [point(e)], previous: strokes };
+    active.current = { pointer: e.pointerId, points: [point(e)], previous: strokes, remainingPoints };
   }
   function move(e: PointerEvent<SVGSVGElement>) {
     const s = active.current;
-    if (!s || s.pointer !== e.pointerId || s.points.length >= 1000) return;
+    if (!s || s.pointer !== e.pointerId || s.points.length >= Math.min(1000, s.remainingPoints)) return;
     s.points.push(point(e));
     onChange([...s.previous, [...s.points]]);
   }
   return (
     <div className="draw-box">
       <svg
+        id={id}
+        tabIndex={-1}
         viewBox="0 0 400 120"
         preserveAspectRatio="none"
         role="img"

@@ -1020,6 +1020,105 @@ small {
 .signing {
   padding-block: 2rem 4rem;
 }
+.signing-guide {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem 1.2rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+.signing-progress {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+}
+.signing-progress strong {
+  font-size: 0.95rem;
+}
+.signing-progress progress {
+  width: min(16rem, 100%);
+  height: 0.45rem;
+  accent-color: var(--accent);
+}
+.signing-guide .button {
+  text-align: left;
+}
+.sign-field.filled {
+  border-color: #469279;
+  background: #def2e6d9;
+  color: #164533;
+}
+.sign-field > svg:not(.lucide) {
+  width: 100%;
+  height: 100%;
+}
+.signer-fields .review-heading {
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+}
+.signing-receipt {
+  text-align: left;
+  margin: 1.2rem 0;
+  padding: 0.7rem 1rem;
+  border-block: 1px solid var(--line);
+}
+.signing-receipt > div {
+  display: flex;
+  gap: 0.5rem 1rem;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: 0.25rem 0;
+}
+.signing-receipt dt {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+.signing-receipt dd {
+  margin: 0;
+  font-weight: 600;
+}
+.verify-copy {
+  margin-top: 1.1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+  text-align: left;
+}
+.verify-copy summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+}
+.verify-copy summary svg {
+  vertical-align: -0.2em;
+  margin-inline: 0.2rem;
+}
+.verify-copy p,
+.verify-copy label {
+  font-size: 0.9rem;
+}
+.verify-copy input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+}
+.verify-copy [aria-live]:empty {
+  display: none;
+}
+@media (max-width: 620px) {
+  .signing-guide {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .signing-progress progress {
+    width: 100%;
+  }
+}
 .signer-layout {
   grid-template-columns: minmax(0, 1fr) minmax(270px, 355px);
 }

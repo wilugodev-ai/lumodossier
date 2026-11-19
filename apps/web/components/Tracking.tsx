@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Link2, Bell, Ban, Download, FileCheck2, History, FileText, Check, Copy } from 'lucide-react';
 import { dateTime, message, sender, access, saveCopy } from '../lib/client';
+import { VerifyCopy } from './VerifyCopy';
 import { states, type Detail } from '../lib/types';
 const labels: Record<string, string> = {
   created: 'Draft created',
@@ -297,6 +298,7 @@ export function Tracking({
                   Completion record
                   <Download size={15} />
                 </button>
+                <VerifyCopy key={doc.id} recordPath={path + '/files/record'} requestId={doc.id} />
               </>
             ) : (
               <p className="hint">

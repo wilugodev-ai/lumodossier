@@ -6,6 +6,12 @@ A recipient invitation proves possession of a private link. It works without an 
 
 The completed PDF paints the submitted values onto the frozen original using normalized displayed-page coordinates. Preserve the original file and the downloaded completion record with the signed copy. SHA-256 hashes in the record identify both byte streams. This is an ordinary electronic-signature workflow. Its evidence does not include identity-document verification, notarization, an independent timestamp authority or a certificate-based digital signature.
 
+## Verify a downloaded copy
+
+Open **Verify a signed copy** in the recipient’s completed agreement or the sender’s **Document files** panel. Choose the downloaded PDF. The browser retrieves the authorized completion record for that agreement, hashes the selected file locally with SHA-256 and compares the two hashes. An exact match confirms the file is byte-for-byte identical to the recorded signed PDF. The file picker keeps the selected document on the device. Each recipient also sees their own signature timestamp and, after completion, the agreement’s completion time.
+
+[See the guided signing room](images/guided-signing.png)
+
 ## Private storage and authorization
 
 PDFs are validated and staged in private PostgreSQL byte arrays in the same transaction as their storage jobs. A worker writes the object to a deterministic private bucket key with a create-only generation precondition, verifies an existing object after an interrupted retry, and removes the database staging copy after confirmation. A completed request is published only after the signed PDF has been stored. The application never issues public object URLs. It authorizes each preview and download, verifies the bytes against their recorded hashes, then sends them with private no-store response headers.

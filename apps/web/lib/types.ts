@@ -81,6 +81,8 @@ export type SigningView = {
   fields: Field[];
   signed: boolean;
   completed: boolean;
+  signedAt: string | null;
+  completedAt: string | null;
   consentVersion: string;
   consent: string;
   intent: string;

@@ -4,11 +4,13 @@
 
 LumoDossier is an electronic-signature workspace for business PDFs. The public home page fits on one screen, with a moving 3D agreement and controls to create an account or sign in. Registration and password recovery open on that page. The private sender dashboard, recipient signing room and optional Touchlumo component share the same NestJS API. Recipients open an expiring signing link without creating an account.
 
+[Open the hosted LumoDossier workspace](https://lumodossier-web-269702414030.us-east1.run.app)
+
 ![Animated LumoDossier signing workspace](docs/images/lumodossier-motion.webp)
 
 ## Run with your own isolated services
 
-Use Node 24.19.x and pnpm 12.5.1. The hosted design uses Supabase PostgreSQL 15 or later, Supabase Auth and a private Google Cloud Storage bucket. Set up the database login, bucket permissions and email provider using the [deployment guide](docs/deployment.md).
+Use Node 24.19.x and pnpm 12.5.1. The hosted design uses Supabase PostgreSQL 15 or later, Supabase Auth and a private Google Cloud Storage bucket. Set up the database login, bucket permissions and email provider for your environment. [Google Cloud deployment guide](docs/google-cloud.md)
 
 1. At the repository root run `pnpm install --frozen-lockfile`. Copy `.env.example` to `.env` and enter the API settings. `LINK_SECRET` must be generated once and retained. For example, run `node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"` locally.
 2. In `apps/web/.env.local` set `NEXT_PUBLIC_API_ORIGIN`, `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. The frontend needs only these public settings. Next.js reads them when building browser code.
@@ -37,8 +39,8 @@ Open **Your account** to see your email, current workspace and role, or change y
 3. Select a recipient, field type and page. Choose **Add field**, then drag the field or resize its corner. The position and size controls also support keyboard entry. Each recipient needs a required signature or initials field.
 4. Review the recipients and deadline, then choose **Send request**. Sending freezes the document version. Start a new request to change a sent agreement.
 5. When email is unavailable, choose **Create sharing link** next to the eligible recipient. This intentionally replaces that person's previous links. Give the link to the named recipient privately.
-6. The recipient reviews the PDF, completes their assigned fields, consents and confirms intent. They can also decline with a reason. Sequential routing releases the next invitation only after the preceding person signs.
-7. Open the request to see recipient progress, email attempts and the activity history. Once all signatures are recorded and the final file is privately stored, download the signed PDF and the JSON completion record. Recipients can download the final copy through a valid link.
+6. The recipient reviews the PDF, completes their assigned fields, consents and confirms intent. The signing guide jumps to each required field in page order. They can also decline with a reason. Sequential routing releases the next invitation only after the preceding person signs.
+7. Open the request to see recipient progress, email attempts and the activity history. Once all signatures are recorded and the final file is privately stored, download the signed PDF and the JSON completion record. Recipients can download the final copy through a valid link. **Verify a signed copy** checks a local PDF against the authorized completion record on the device.
 
 ## Checks
 
@@ -57,10 +59,11 @@ pnpm test:e2e
 
 ## Project guide
 
-- [Render testing deployment, email provider and configuration](docs/deployment.md)
+- [Google Cloud Run deployment and scheduled processing](docs/google-cloud.md)
+- [Render blueprint, email provider and configuration](docs/deployment.md)
 - [Touchlumo integration and workspace permissions](docs/touchlumo.md)
 - [Persistence, evidence, job recovery and limitations](docs/signing.md)
 - [PDF libraries, fonts, licenses and placement verification](docs/pdf.md)
 - [Checks performed and test environment boundaries](docs/verification.md)
 
-The planned public domain is `lumodossier.com`. Use the actual Render-generated origins for testing. A deployment URL is available only after provisioning and smoke-testing those services.
+The planned custom domain is `lumodossier.com`. The Google testing deployment uses the Cloud Run address above.

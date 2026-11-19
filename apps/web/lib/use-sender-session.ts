@@ -19,7 +19,7 @@ export function useSenderSession() {
       return;
     }
     function session(current: User | null) {
-      if (!active) return;
+      if (!active || isLeaving()) return;
       if (!current) {
         location.replace(
           '/?account=signin&next=' + encodeURIComponent(location.pathname + location.search),
@@ -42,7 +42,8 @@ export function useSenderSession() {
         stop?.();
         if (active) {
           setUser(null);
-          if (!isLeaving()) location.replace('/?account=signin');
+          if (!isLeaving())
+            location.replace(userId && isIdle(userId) ? '/?account=signin&idle=1' : '/?account=signin');
         }
       } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') session(value?.user ?? null);
     }).data.subscription;

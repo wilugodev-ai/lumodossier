@@ -1,0 +1,25 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    env: ['DOCKER_BUILDKIT=1']
+    args:
+      - build
+      - --target
+      - ${_TARGET}
+      - --build-arg
+      - NEXT_PUBLIC_API_ORIGIN=${_API_ORIGIN}
+      - --build-arg
+      - NEXT_PUBLIC_SUPABASE_URL=${_SUPABASE_URL}
+      - --build-arg
+      - NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${_PUBLISHABLE_KEY}
+      - --tag
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/lumo/${_TARGET}:$BUILD_ID
+      - .
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/lumo/${_TARGET}:$BUILD_ID
+substitutions:
+  _REGION: us-east1
+  _TARGET: web
+  _API_ORIGIN: ''
+  _SUPABASE_URL: ''
+  _PUBLISHABLE_KEY: ''
+timeout: 1200s
