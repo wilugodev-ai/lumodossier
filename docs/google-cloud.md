@@ -47,7 +47,21 @@ Run `pnpm migrate` against the isolated database with a schema-owner connection 
 
 Hostinger manages DNS for `lumodossier.com`. The regional Cloud Run mappings for the apex and `www.lumodossier.com` target `lumodossier-web`. The website redirects `www` to the apex and preserves the path and query. Browser signing links keep the invitation token in the URL fragment.
 
-Use the DNS records reported by the two mappings in the Google project. Once HTTPS on the apex serves the LumoDossier home page and `/health`, set `WEB_ORIGIN=https://lumodossier.com` on the API and worker. Set `PREVIOUS_WEB_ORIGIN` on the API to the original public Cloud Run web origin so already-issued private links can still access their document. In Supabase Auth, set the Site URL to the apex and allow the dashboard and password recovery URLs on both origins. [Cloud Run domain mapping](https://docs.cloud.google.com/run/docs/mapping-custom-domains)
+Google assigned the following records to these mappings. Enter each address as a separate value in Hostinger. Replace the parked apex A record and edit the existing `www` CNAME. Keep the Google ownership TXT record. In hPanel, `@` means `lumodossier.com`. [Hostinger DNS panel](https://hpanel.hostinger.com/domain/lumodossier.com/dns)
+
+| Type | Host | Google target |
+| --- | --- | --- |
+| A | @ | `216.239.32.21` |
+| A | @ | `216.239.34.21` |
+| A | @ | `216.239.36.21` |
+| A | @ | `216.239.38.21` |
+| AAAA | @ | `2001:4860:4802:32::15` |
+| AAAA | @ | `2001:4860:4802:34::15` |
+| AAAA | @ | `2001:4860:4802:36::15` |
+| AAAA | @ | `2001:4860:4802:38::15` |
+| CNAME | www | `ghs.googlehosted.com` |
+
+Once HTTPS on the apex serves the LumoDossier home page and `/health`, set `WEB_ORIGIN=https://lumodossier.com` on the API and worker. Set `PREVIOUS_WEB_ORIGIN` on the API to the original public Cloud Run web origin so already-issued private links can still access their document. In Supabase Auth, set the Site URL to the apex and allow the dashboard and password recovery URLs on both origins. [Cloud Run domain mapping](https://docs.cloud.google.com/run/docs/mapping-custom-domains)
 
 ## Accounts, invitations and Touchlumo
 
