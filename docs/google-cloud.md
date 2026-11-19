@@ -1,6 +1,6 @@
 # LumoDossier on Google Cloud
 
-The dedicated testing project is `lumodossier-20261118`. Two Google Cloud Run services in `us-east1` host the website and API. The website can scale from zero to three instances and the API from zero to two. The database and Auth service run in a separate Supabase project in the eastern United States. [Open LumoDossier](https://lumodossier-web-269702414030.us-east1.run.app) · [API health](https://lumodossier-api-269702414030.us-east1.run.app/health)
+The dedicated testing project is `lumodossier-20261118`. Two Google Cloud Run services in `us-east1` host the website and API. The website can scale from zero to three instances and the API from zero to two. The database and Auth service run in a separate Supabase project in the eastern United States. [Open LumoDossier](https://lumodossier.com) · [API health](https://lumodossier-api-269702414030.us-east1.run.app/health)
 
 | Resource | Configuration |
 | --- | --- |
@@ -17,7 +17,7 @@ Cloud Run supplies the service identities used to read objects and secrets. The 
 
 Use the repository root and an authenticated Google Cloud CLI. `.gcloudignore` and `.dockerignore` allowlist the build inputs. Cloud Build installs the pinned pnpm dependencies and builds the selected target in `Dockerfile`. Both target images run as a non-root user.
 
-Set `$PublishableKey` to the public Supabase publishable key. The two HTTPS origins below are the canonical addresses used for Auth redirects, CORS and private links. Use the corresponding values when deploying another project.
+Set `$PublishableKey` to the public Supabase publishable key. The web build connects to the Google-hosted API and the Supabase Auth project at the addresses below.
 
 ```powershell
 $Project = 'lumodossier-20261118'
@@ -45,9 +45,9 @@ Run `pnpm migrate` against the isolated database with a schema-owner connection 
 
 ## Custom domain
 
-Hostinger manages DNS for `lumodossier.com`. The regional Cloud Run mappings for the apex and `www.lumodossier.com` target `lumodossier-web`. The website redirects `www` to the apex and preserves the path and query. Browser signing links keep the invitation token in the URL fragment.
+Hostinger manages DNS for `lumodossier.com`. Google Cloud Run serves the root domain and `www.lumodossier.com` over HTTPS through the `lumodossier-web` service. The website redirects `www` to the root domain and preserves the path and query. Browser signing links keep the invitation token in the URL fragment.
 
-Google assigned the following records to these mappings. Enter each address as a separate value in Hostinger. Replace the parked apex A record and edit the existing `www` CNAME. Keep the Google ownership TXT record. In hPanel, `@` means `lumodossier.com`. [Hostinger DNS panel](https://hpanel.hostinger.com/domain/lumodossier.com/dns)
+Both authoritative Hostinger nameservers publish the following records. In hPanel, `@` means `lumodossier.com`. The domain also has a TXT record for Google ownership verification. [Hostinger DNS panel](https://hpanel.hostinger.com/domain/lumodossier.com/dns)
 
 | Type | Host | Google target |
 | --- | --- | --- |
@@ -61,11 +61,11 @@ Google assigned the following records to these mappings. Enter each address as a
 | AAAA | @ | `2001:4860:4802:38::15` |
 | CNAME | www | `ghs.googlehosted.com` |
 
-Once HTTPS on the apex serves the LumoDossier home page and `/health`, set `WEB_ORIGIN=https://lumodossier.com` on the API and worker. Set `PREVIOUS_WEB_ORIGIN` on the API to the original public Cloud Run web origin so already-issued private links can still access their document. In Supabase Auth, set the Site URL to the apex and allow the dashboard and password recovery URLs on both origins. [Cloud Run domain mapping](https://docs.cloud.google.com/run/docs/mapping-custom-domains)
+The API and worker use `WEB_ORIGIN=https://lumodossier.com` for new invitations. The API also accepts the original web origin through `PREVIOUS_WEB_ORIGIN=https://lumodossier-web-269702414030.us-east1.run.app`, so recipients can still open an existing link there. [Domain health](https://lumodossier.com/health) · [Cloud Run domain mapping](https://docs.cloud.google.com/run/docs/mapping-custom-domains)
 
 ## Accounts, invitations and Touchlumo
 
-Supabase Auth has email confirmation enabled. Its site URL is the public Cloud Run web origin, with the dashboard and password recovery URLs allowed. Supabase's default email service sends account messages to project team addresses. Configure a verified sender in Supabase Auth SMTP to open public registration and password recovery to other addresses. [Supabase Auth SMTP](https://supabase.com/docs/guides/auth/auth-smtp)
+Supabase Auth has email confirmation enabled. Its Site URL is `https://lumodossier.com`. The redirect allowlist includes `/dashboard` and `/?account=reset` on both the custom domain and the original Google web address. Supabase's default email service sends account messages to project team addresses. Configure a verified sender in Supabase Auth SMTP to open public registration and password recovery to other addresses. [Supabase Auth SMTP](https://supabase.com/docs/guides/auth/auth-smtp)
 
 Signature invitations have a separate delivery setting. The deployed API uses manual link sharing. To enable email delivery, configure `EMAIL_API_KEY` and `EMAIL_FROM` for both the API and worker, using the same HTTPS provider. A recipient can sign and download a copy through the private link without an account.
 

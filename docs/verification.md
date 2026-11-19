@@ -2,7 +2,9 @@
 
 ## Google Cloud Run
 
-The public home page and database-backed API health check returned HTTP 200. Anonymous workspace access returned HTTP 401. A disposable confirmed Supabase account signed in, created a workspace, uploaded a PDF and shared a manual link. A separate phone-sized browser session signed through the private link and downloaded the completed PDF. The on-device verifier matched the exact copy and detected a one-byte alteration. The test removed the disposable sender login. The private Cloud Run worker completed successfully. [Hosted LumoDossier](https://lumodossier-web-269702414030.us-east1.run.app)
+Both authoritative Hostinger nameservers returned Google's assigned records. Google reported active HTTPS certificates for `lumodossier.com` and `www.lumodossier.com`. The home page and health endpoint returned HTTP 200 on the root domain. A request to `www.lumodossier.com/sign?view=receipt` returned HTTP 308 and preserved the path and query. Supabase generated a recovery link back to `https://lumodossier.com/?account=reset`. [Hosted LumoDossier](https://lumodossier.com) · [Domain health](https://lumodossier.com/health)
+
+A disposable confirmed sender signed in on the custom domain, created a workspace, uploaded a PDF and generated a signing link on that domain. The recipient could open the same invitation on the original Google address. A separate mobile-sized browser signed on the custom domain and downloaded the completed PDF. The on-device verifier matched the original download and detected a one-byte change. The test removed the disposable sender login. The database-backed API health check passed, anonymous workspace access returned HTTP 401, and the API allowed browser access from both web addresses. The private Cloud Run worker also completed successfully. [Deployment configuration](google-cloud.md)
 
 ## Local verification
 

@@ -4,7 +4,7 @@
 
 LumoDossier is an electronic-signature workspace for business PDFs. The public home page fits on one screen, with a moving 3D agreement and controls to create an account or sign in. Registration and password recovery open on that page. The private sender dashboard, recipient signing room and optional Touchlumo component share the same NestJS API. Recipients open an expiring signing link without creating an account.
 
-[Open the hosted LumoDossier workspace](https://lumodossier-web-269702414030.us-east1.run.app)
+[Open LumoDossier at lumodossier.com](https://lumodossier.com)
 
 ![Animated LumoDossier signing workspace](docs/images/lumodossier-motion.webp)
 
@@ -68,4 +68,4 @@ pnpm test:e2e
 - [PDF libraries, fonts, licenses and placement verification](docs/pdf.md)
 - [Checks performed and test environment boundaries](docs/verification.md)
 
-The custom domain is `lumodossier.com`. The Google-generated address above also gives access to the standalone service. [Custom domain setup](docs/google-cloud.md#custom-domain)
+Hostinger manages DNS for `lumodossier.com`. Google Cloud Run serves the site and redirects `www.lumodossier.com` to the same page on the main domain. [Custom domain setup](docs/google-cloud.md#custom-domain)
