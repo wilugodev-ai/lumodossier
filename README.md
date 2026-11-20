@@ -34,6 +34,16 @@ Open **Team** in the dashboard to see members and their roles. Owners can invite
 
 Open **Your account** to see your email, current workspace and role, or change your password. **Forgot password?** on the home page sends a Supabase recovery email when Auth SMTP is configured. Sender sessions sign out in the browser after 30 minutes of inactivity. Activity in another tab of the same browser and origin counts toward that window.
 
+## Use a real estate template
+
+In **Documents**, choose **Real estate templates**. Open a blank PDF to see the form, or choose **Use template**, enter the property details, and select **Create draft**. Enter a name and email for each signing role. The draft already has a signature and date for each party. You can adjust the fields and signing order before sending. A connected Touchlumo customer is prefilled in the first role.
+
+- Record a visit and follow-up questions. [Property Showing Record](https://lumodossier.com/templates/property-showing-record.pdf)
+- Record observations during a move-in, move-out, or interim inspection. [Property Condition Report](https://lumodossier.com/templates/property-condition-report.pdf)
+- Record the issue, return, or exchange of keys, fobs, and remotes. [Key Handover Receipt](https://lumodossier.com/templates/key-handover-receipt.pdf)
+
+The three blank forms are public. The completed property details and the resulting PDFs use the workspace’s private document storage.
+
 ## Walk through a signature request
 
 1. Choose **New request**, upload a PDF and give it a title. Uploads are limited to 15 MiB and 100 pages. Encrypted PDFs, dynamic XFA forms and PDFs with existing digital signatures need an unsigned static source.

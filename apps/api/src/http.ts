@@ -29,6 +29,7 @@ import { Services } from './providers';
 import { PdfInputError } from './pdf';
 import { statuses } from './sender';
 import { Team } from './team';
+import { propertyTemplates } from './property-templates';
 
 const ENGINE = Symbol('signing');
 const TEAM = Symbol('team');
@@ -174,6 +175,26 @@ class Api {
       Object.fromEntries(Object.entries(q).filter(([k]) => ['customer', 'quote', 'deal'].includes(k))),
     );
     return this.app.list(await this.who(a), w, search, status, page, refs);
+  }
+  @Get('v1/templates/real-estate') async templates(@Headers('authorization') a: string) {
+    await this.who(a);
+    return propertyTemplates;
+  }
+  @Post('v1/workspaces/:w/templates/:template') async useTemplate(
+    @Headers('authorization') a: string,
+    @Param('w', uuid) w: string,
+    @Param('template') template: string,
+    @Body() body: unknown,
+  ) {
+    const who = await this.who(a);
+    await this.app.limit('upload/' + who.id, 24);
+    const { values, crm } = z
+      .strictObject({
+        values: z.record(z.string().max(40), z.string().max(240)),
+        crm: crmSchema.default({}),
+      })
+      .parse(body);
+    return this.app.createDraft(who, w, crm, { template, values });
   }
   @Post('v1/workspaces/:w/documents') async upload(
     @Headers('authorization') a: string,

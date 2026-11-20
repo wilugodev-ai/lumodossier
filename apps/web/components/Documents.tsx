@@ -12,9 +12,11 @@ import {
   ChevronRight,
   RefreshCw,
   UploadCloud,
+  LayoutTemplate,
 } from 'lucide-react';
 import { sender, message, dateTime } from '../lib/client';
 import { states, type Refs, type Summary, type Workspace } from '../lib/types';
+import { PropertyTemplates } from './PropertyTemplates';
 type Listing = { documents: Summary[]; total: number; stats: { status: string; count: number }[] };
 export function Documents({
   workspace,
@@ -22,12 +24,14 @@ export function Documents({
   refs,
   open,
   create,
+  templates,
 }: {
   workspace: Workspace;
   initial?: string;
   refs: Refs;
   open: (id: string) => void;
   create: () => void;
+  templates: () => void;
 }) {
   const [search, setSearch] = useState(''),
     [filter, setFilter] = useState(initial),
@@ -85,10 +89,14 @@ export function Documents({
           <p>Prepare, send and track your signature requests.</p>
         </div>
         {workspace.role !== 'viewer' && (
-          <button className="button" onClick={create}>
-            <Plus size={17} />
-            New request
-          </button>
+          <div className="document-actions">
+            <button className="button outline" onClick={templates}>
+              <LayoutTemplate size={17} /> Real estate templates
+            </button>
+            <button className="button" onClick={create}>
+              <Plus size={17} /> New request
+            </button>
+          </div>
         )}
       </div>
       <div className="summary-grid">
@@ -150,7 +158,7 @@ export function Documents({
             <p>
               {search || filter
                 ? 'Try another title or status.'
-                : 'Start with a PDF to prepare your first signature request.'}
+                : 'Upload a PDF or use a real estate template for your first request.'}
             </p>
             {!search && !filter && workspace.role !== 'viewer' && (
               <button className="button outline" onClick={create}>
@@ -227,10 +235,14 @@ export function Upload({
   workspace,
   refs,
   open,
+  templateMode,
+  changeSource,
 }: {
   workspace: Workspace;
   refs: Refs;
   open: (id: string) => void;
+  templateMode: boolean;
+  changeSource: (templates: boolean) => void;
 }) {
   const [file, setFile] = useState<File | null>(null),
     [title, setTitle] = useState(''),
@@ -270,42 +282,58 @@ export function Upload({
       <div className="workspace-head">
         <div>
           <div className="eyebrow">New signature request</div>
-          <h1>Upload a document</h1>
-          <p>Choose the PDF your recipients will review and sign.</p>
+          <h1>{templateMode ? 'Real estate templates' : 'Upload a document'}</h1>
+          <p>
+            {templateMode
+              ? 'Choose a form to prepare for signature.'
+              : 'Choose the PDF your recipients will review and sign.'}
+          </p>
         </div>
       </div>
-      <form className="form-panel" onSubmit={submit}>
-        <label
-          className="dropzone"
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => {
-            e.preventDefault();
-            choose(e.dataTransfer.files[0]);
-          }}
-        >
-          <UploadCloud size={36} />
-          <strong>{file ? file.name : 'Choose a PDF or drag it here'}</strong>
-          <span>PDF · Up to 15 MB · Up to 100 pages</span>
-          <input
-            aria-label="Choose PDF"
-            type="file"
-            accept="application/pdf,.pdf"
-            onChange={(e) => choose(e.target.files?.[0])}
-          />
-        </label>
-        <label>
-          Document title
-          <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} required />
-        </label>
-        {error && (
-          <p role="alert" className="notice error">
-            {error}
-          </p>
-        )}
-        <button className="button" disabled={!file || busy}>
-          {busy ? 'Validating PDF…' : 'Upload and continue'}
+      <nav className="request-sources" aria-label="Document source">
+        <button aria-pressed={!templateMode} disabled={busy} onClick={() => changeSource(false)}>
+          <UploadCloud size={16} /> Upload PDF
         </button>
-      </form>
+        <button aria-pressed={templateMode} disabled={busy} onClick={() => changeSource(true)}>
+          <LayoutTemplate size={16} /> Real estate templates
+        </button>
+      </nav>
+      {templateMode ? (
+        <PropertyTemplates workspace={workspace} refs={refs} open={open} />
+      ) : (
+        <form className="form-panel" onSubmit={submit}>
+          <label
+            className="dropzone"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              choose(e.dataTransfer.files[0]);
+            }}
+          >
+            <UploadCloud size={36} />
+            <strong>{file ? file.name : 'Choose a PDF or drag it here'}</strong>
+            <span>PDF · Up to 15 MB · Up to 100 pages</span>
+            <input
+              aria-label="Choose PDF"
+              type="file"
+              accept="application/pdf,.pdf"
+              onChange={(e) => choose(e.target.files?.[0])}
+            />
+          </label>
+          <label>
+            Document title
+            <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} required />
+          </label>
+          {error && (
+            <p role="alert" className="notice error">
+              {error}
+            </p>
+          )}
+          <button className="button" disabled={!file || busy}>
+            {busy ? 'Validating PDF…' : 'Upload and continue'}
+          </button>
+        </form>
+      )}
     </>
   );
 }

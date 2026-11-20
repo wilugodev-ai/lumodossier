@@ -21,6 +21,12 @@ The upload limit is 15 MiB and 100 pages per document. The API checks the file h
 
 Typed values must be printable in the bundled font. The API checks glyph coverage before accepting each submission. A recipient can also draw a signature or initials. Drawn strokes use normalized points and remain vector paths in the completed PDF.
 
+## Real estate forms
+
+The three original blank forms and their print layout are in `apps/api/assets/real-estate`. To update the blanks, edit `catalog.json`, run `python apps/api/scripts/render_property_templates.py` with ReportLab installed, and review the resulting PDFs. The web build copies the blank PDFs to `/templates/`.
+
+When a sender creates a draft, the API prints the property details onto a private copy. The same layout defines the signature and date rectangles for both parties. Each draft gets its own original hash, recipient IDs and field IDs. [Template walkthrough](../README.md#use-a-real-estate-template)
+
 ## Verify placement
 
 Install Poppler and make `pdftoppm` available on the path, or set `PDFTOPPM` to its executable path. Run from the repository root.

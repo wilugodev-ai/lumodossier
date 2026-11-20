@@ -21,8 +21,10 @@ export const crmSchema = z.strictObject({
   deal: id.optional(),
 });
 export type Refs = z.infer<typeof crmSchema>;
+const signingRole = z.string().trim().min(1).max(60).optional();
 export const personSchema = z.strictObject({
   id,
+  signingRole,
   name: z.string().trim().min(1).max(120),
   email: z
     .email()
@@ -50,6 +52,7 @@ export const draftSchema = z.strictObject({
     .array(
       z.strictObject({
         id,
+        signingRole,
         name: z.string().trim().max(120),
         email: z
           .string()

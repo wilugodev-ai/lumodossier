@@ -23,6 +23,10 @@ import {
   stage,
 } from './repository';
 import { inspectPdf, sha256 } from './pdf';
+import { preparePropertyTemplate } from './property-templates';
+
+type DraftSource =
+  { title: string; data: Buffer } | { template: string; values: Record<string, string> };
 
 export const statuses = [
   'draft',
@@ -35,18 +39,26 @@ export const statuses = [
   'cancelled',
 ] as const;
 export class Sender extends Repository {
-  async upload(who: Identity, w: string, title: string, data: Buffer, crm: Refs = {}) {
+  upload(who: Identity, w: string, title: string, data: Buffer, crm: Refs = {}) {
+    return this.createDraft(who, w, crm, { title, data });
+  }
+  async createDraft(who: Identity, w: string, crm: Refs, source: DraftSource) {
     return this.inSpace(who, w, true, async (tx, space) => {
       const contact = await this.refs(who, space, crm);
       const associated = contact?.id ? { ...crm, customer: contact.id } : crm;
+      const customer = contact?.email ? personFromContact(contact.name, contact.email) : undefined;
+      const { title, data, recipients, fields } =
+        'template' in source
+          ? await preparePropertyTemplate(source.template, source.values, customer)
+          : { ...source, recipients: customer ? [customer] : [], fields: [] };
       const pages = await inspectPdf(data);
+      validateDraft({ title, routing: 'sequential', recipients, fields, crm: associated }, pages);
       const id = randomUUID(),
         version = randomUUID();
-      const recipients = contact?.email ? [personFromContact(contact.name, contact.email)] : [];
       const r = await one<DocumentRow>(
         tx,
-        `insert into lumo.requests(id,workspace_id,version_id,sender_id,sender_email,sender_name,original_hash,pages,title,routing,recipients,crm)
-        values($1,$2,$3,$4,$5,$6,$7,$8,$9,'sequential',$10,$11) returning *`,
+        `insert into lumo.requests(id,workspace_id,version_id,sender_id,sender_email,sender_name,original_hash,pages,title,routing,recipients,fields,crm)
+        values($1,$2,$3,$4,$5,$6,$7,$8,$9,'sequential',$10,$11,$12) returning *`,
         [
           id,
           w,
@@ -58,6 +70,7 @@ export class Sender extends Repository {
           JSON.stringify(pages),
           title,
           JSON.stringify(recipients),
+          JSON.stringify(fields),
           JSON.stringify(associated),
         ],
       );
@@ -67,6 +80,7 @@ export class Sender extends Repository {
         userId: who.id,
         version,
         originalHash: r!.original_hash,
+        ...('template' in source ? { template: source.template } : {}),
       });
       return { id, revision: 1 };
     });

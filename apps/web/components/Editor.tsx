@@ -185,9 +185,9 @@ export function Editor({ doc, path, done }: { doc: Detail; path: string; done: (
             <div className="recipient-row" key={p.id}>
               <span className="ordinal">{i + 1}</span>
               <label>
-                Recipient name
+                {p.signingRole ? p.signingRole + ' name' : 'Recipient name'}
                 <input
-                  aria-label={'Recipient ' + (i + 1) + ' name'}
+                  aria-label={(p.signingRole || 'Recipient ' + (i + 1)) + ' name'}
                   value={p.name}
                   onChange={(e) => updatePerson(p.id, 'name', e.target.value)}
                   maxLength={120}
@@ -196,7 +196,7 @@ export function Editor({ doc, path, done }: { doc: Detail; path: string; done: (
               <label>
                 Email address
                 <input
-                  aria-label={'Recipient ' + (i + 1) + ' email'}
+                  aria-label={(p.signingRole || 'Recipient ' + (i + 1)) + ' email'}
                   type="email"
                   value={p.email}
                   onChange={(e) => updatePerson(p.id, 'email', e.target.value)}

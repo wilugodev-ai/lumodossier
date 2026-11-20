@@ -186,6 +186,7 @@ test('a workspace owner manages an email-matched invitation and member access fr
     await reader.getByRole('button', { name: 'All documents', exact: true }).click();
     await expect(reader.getByText('Your document shelf is empty')).toBeVisible();
     await expect(reader.getByRole('button', { name: 'New request' })).toHaveCount(0);
+    await expect(reader.getByRole('button', { name: 'Real estate templates' })).toHaveCount(0);
     await page.reload();
     await page.getByLabel('Role for ' + email).selectOption('member');
     await expect(page.getByRole('status')).toHaveText('Workspace role updated.');
@@ -345,6 +346,72 @@ test('disposable sender prepares, resumes and sends a PDF; two account-free reci
   await page.getByLabel('Password', { exact: true }).fill(user.password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.locator('.status')).toHaveText('Completed');
+});
+test('a real estate template becomes a private draft and both parties sign the key handover receipt', async ({
+  page,
+  browser,
+}, info) => {
+  await account(page);
+  await page
+    .getByRole('navigation', { name: 'Workspace navigation' })
+    .getByRole('button', { name: 'Create workspace' })
+    .click();
+  await page.getByLabel('Workspace name').fill('Property team');
+  await page.locator('form').getByRole('button', { name: 'Create workspace' }).click();
+  await page.getByRole('button', { name: 'Real estate templates', exact: true }).click();
+  const cards = page.locator('article.property-template-card');
+  await expect(cards).toHaveCount(3);
+  for (const link of await cards.getByRole('link').all()) {
+    const response = await page.request.get((await link.getAttribute('href'))!);
+    expect(response.headers()['content-type']).toContain('application/pdf');
+    expect((await response.body()).subarray(0, 5).toString()).toBe('%PDF-');
+  }
+  await page.screenshot({ path: info.outputPath('property-templates.png') });
+  await page.getByRole('button', { name: 'Use Key Handover Receipt' }).click();
+  await page.getByLabel('Property address / unit').fill('18 Example Lane, Unit 4');
+  await page.getByLabel('Handover date').fill('2026-11-20');
+  await page.getByLabel('Transfer type').selectOption('Issue');
+  await page.getByLabel('Items and quantities').fill('Two entrance keys and one mailbox key.');
+  await page.getByRole('button', { name: 'Create draft' }).click();
+  await expect(page.getByRole('heading', { name: 'Recipients and routing' })).toBeVisible();
+  await page.reload();
+  const parties = [
+    ['Receiving party', 'Casey Lane'],
+    ['Delivering party', 'Jordan Park'],
+  ];
+  for (const [role, name] of parties) {
+    await page.getByLabel(role + ' name').fill(name);
+    await page.getByLabel(role + ' email').fill(name.split(' ')[0].toLowerCase() + '@example.invalid');
+  }
+  await page.getByRole('button', { name: 'Continue to fields' }).click();
+  await page.getByRole('button', { name: 'Review request', exact: true }).click();
+  await page.getByRole('button', { name: 'Send request', exact: true }).click();
+  for (const [role, name] of parties) {
+    const url = await share(page, name);
+    const recipient = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    try {
+      const signer = await recipient.newPage();
+      await signer.goto(url);
+      await signer.getByPlaceholder('Type your full name').fill(name);
+      await signer
+        .locator('.value-field')
+        .getByLabel(new RegExp(role + ' signing date'))
+        .fill('2026-11-20');
+      await signer.getByRole('checkbox', { name: /I consent/ }).check();
+      await signer.getByRole('checkbox', { name: /I have reviewed/ }).check();
+      await signer.getByRole('button', { name: 'Confirm and sign' }).click();
+      await expect(
+        signer.getByRole('heading', { name: /Your signature is recorded|Your copy is ready/ }),
+      ).toBeVisible();
+    } finally {
+      await recipient.close();
+    }
+    await page.reload();
+  }
+  await expect(page.locator('.status')).toHaveText('Completed');
+  const downloaded = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Signed PDF', exact: true }).click();
+  await (await downloaded).saveAs(info.outputPath('key-handover-signed.pdf'));
 });
 test('connected customer view prefills a request and tracks the same completion as the sender', async ({
   page,

@@ -15,6 +15,9 @@
 !apps/api/assets/
 !apps/api/assets/*.ttf
 !apps/api/assets/LICENSE_LIBERATION
+!apps/api/assets/real-estate/
+!apps/api/assets/real-estate/*.pdf
+!apps/api/assets/real-estate/catalog.json
 !apps/web/
 !apps/web/package.json
 !apps/web/tsconfig.json

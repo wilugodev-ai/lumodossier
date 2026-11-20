@@ -303,7 +303,14 @@ export function Dashboard() {
               <ChevronLeft size={15} />
               All documents
             </button>
-            <Upload workspace={workspace} refs={refs} open={(id) => go({ document: id })} />
+            <Upload
+              key={workspace.id + JSON.stringify(refs)}
+              workspace={workspace}
+              refs={refs}
+              open={(id) => go({ document: id })}
+              templateMode={params.get('new') === 'templates'}
+              changeSource={(templates) => go({ new: templates ? 'templates' : '1' })}
+            />
           </>
         ) : (
           <Documents
@@ -313,6 +320,7 @@ export function Dashboard() {
             initial={filter}
             open={(id) => go({ document: id })}
             create={() => go({ new: '1' })}
+            templates={() => go({ new: 'templates' })}
           />
         )}
       </main>

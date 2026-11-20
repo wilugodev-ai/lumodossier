@@ -7,6 +7,7 @@ FROM base AS web-build
 COPY apps/web/package.json apps/web/package.json
 RUN pnpm --filter @lumo/web install --frozen-lockfile
 COPY apps/web/ apps/web/
+COPY apps/api/assets/real-estate/*.pdf apps/api/assets/real-estate/
 ARG NEXT_PUBLIC_API_ORIGIN
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY

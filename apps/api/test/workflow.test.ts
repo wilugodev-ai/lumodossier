@@ -296,6 +296,65 @@ test('recovers orphaned leases, retries a private object write and tracks provid
     env.services.mail.enabled = false;
   }
 });
+test('property templates create separate private originals and role-bound fields, and reject invalid details atomically', async () => {
+  const space = (await app.createSpace(env.owner, 'Property forms')).id;
+  const common = { address: '18 Example Lane, Unit 4', eventDate: '2026-11-20' };
+  const forms: [string, Record<string, string>][] = [
+    ['property-showing-record', { areas: 'Unit and courtyard' }],
+    ['property-condition-report', { stage: 'Move-in', rooms: 'Hall flooring has a small scratch.' }],
+    ['key-handover-receipt', { direction: 'Return', inventory: 'Two entry keys and one fob.' }],
+  ];
+  const originals = new Set<string>();
+  for (const [template, values] of forms) {
+    const result = await app.createDraft(
+      env.owner,
+      space,
+      {},
+      { template, values: { ...common, ...values } },
+    );
+    const draft = await app.detail(env.owner, space, result.id);
+    assert.equal(draft.status, 'draft');
+    assert.equal(draft.pages.length, 1);
+    assert.match(draft.title, /18 Example Lane/);
+    assert.equal(draft.recipients.length, 2);
+    assert.equal(draft.fields.length, 4);
+    for (const person of draft.recipients) {
+      assert.ok(person.signingRole);
+      assert.deepEqual(
+        draft.fields.filter((f) => f.personId === person.id && f.required).map((f) => f.type),
+        ['signature', 'date'],
+      );
+    }
+    const original = (await app.download(env.owner, space, result.id, 'original')) as Buffer;
+    assert.equal(draft.original_hash, sha256(original));
+    originals.add(draft.original_hash);
+    await assert.rejects(app.download(env.other, space, result.id, 'original'), failure(404));
+    await assert.rejects(app.send(env.owner, space, result.id, result.revision, 14), failure(400));
+  }
+  assert.equal(originals.size, forms.length);
+  const source = {
+    template: 'key-handover-receipt',
+    values: { ...common, direction: 'Issue', inventory: 'One key' },
+  };
+  await assert.rejects(app.createDraft(env.viewer, w, {}, source), failure(403));
+  await assert.rejects(app.createDraft(env.other, space, {}, source), failure(404));
+  for (const invalid of [
+    { ...source.values, address: ' ' },
+    { ...source.values, eventDate: '2026-02-30' },
+    { ...source.values, direction: 'Unlisted' },
+    { ...source.values, unexpected: 'extra value' },
+  ]) {
+    await assert.rejects(
+      app.createDraft(env.owner, space, {}, { ...source, values: invalid }),
+      failure(400),
+    );
+  }
+  await assert.rejects(
+    app.createDraft(env.owner, space, {}, { ...source, template: 'unknown' }),
+    failure(404),
+  );
+  assert.equal((await app.list(env.owner, space, '', '', 1, {})).total, 3);
+});
 test('CRM adapter checks membership and references and sees the same authoritative request', async () => {
   const cid = randomUUID(),
     space = randomUUID(),
@@ -324,6 +383,20 @@ test('CRM adapter checks membership and references and sees the same authoritati
       all = await app.list(env.owner, space, '', '', 1, {});
     assert.equal(related.documents[0].id, all.documents[0].id);
     assert.equal(related.documents[0].status, 'draft');
+    const prepared = await app.createDraft(
+      env.owner,
+      space,
+      { customer },
+      {
+        template: 'property-showing-record',
+        values: { address: '18 Example Lane', eventDate: '2026-11-20', areas: 'Courtyard' },
+      },
+    );
+    const templateDraft = await app.detail(env.owner, space, prepared.id);
+    assert.equal(templateDraft.crm.customer, customer);
+    assert.equal(templateDraft.recipients[0].signingRole, 'Visitor');
+    assert.equal(templateDraft.recipients[0].email, 'contact@example.invalid');
+    assert.equal(templateDraft.recipients[1].email, '');
     await assert.rejects(app.list(env.other, space, '', '', 1, { customer }), failure(404));
   } finally {
     env.services.crm = undefined;

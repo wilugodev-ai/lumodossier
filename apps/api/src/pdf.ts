@@ -207,6 +207,11 @@ function getFace(face: Face) {
   return data;
 }
 
+export async function embedBodyFont(doc: PDFDocument) {
+  doc.registerFontkit(fontkit);
+  return doc.embedFont(getFace('Regular').bytes, { subset: true });
+}
+
 export function validatePdfText(value: string, type: FilledField['type']): void {
   const text = value.normalize('NFC').replace(/\r\n?/g, '\n');
   const font = getFace(fieldFace(type));

@@ -1,0 +1,57 @@
+{
+  "page": [612, 792],
+  "layout": {
+    "address": [48, 181, 347, 52],
+    "eventDate": [424, 181, 140, 52],
+    "rows": [[210, 270, 350, 53], [210, 330, 350, 53], [210, 390, 350, 53], [210, 450, 350, 53]],
+    "signature": [[48, 603, 234, 50], [324, 603, 240, 50]],
+    "signedDate": [[48, 684, 234, 29], [324, 684, 240, 29]]
+  },
+  "templates": [
+    {
+      "id": "property-showing-record",
+      "title": "Property Showing Record",
+      "description": "Record a property visit, the areas viewed, and any follow-up the visitor requested.",
+      "dateLabel": "Showing date",
+      "section": "Visit details",
+      "acknowledgment": "The visitor and showing host acknowledge the visit recorded above.",
+      "roles": ["Visitor", "Showing host"],
+      "details": [
+        { "key": "time", "label": "Time of visit", "hint": "For example, 10:30 a.m. local time", "limit": 60 },
+        { "key": "areas", "label": "Areas viewed", "hint": "Rooms, units, or common areas visited", "limit": 200, "required": true },
+        { "key": "observations", "label": "Visitor observations", "hint": "Features or conditions noted during the visit", "limit": 200 },
+        { "key": "followUp", "label": "Follow-up requested", "hint": "Questions to answer or next steps agreed", "limit": 200 }
+      ]
+    },
+    {
+      "id": "property-condition-report",
+      "title": "Property Condition Report",
+      "description": "Document the condition of a home at move-in, move-out, or an interim inspection.",
+      "dateLabel": "Inspection date",
+      "section": "Condition at inspection",
+      "acknowledgment": "The resident and property representative acknowledge the observations recorded above.",
+      "roles": ["Resident", "Property representative"],
+      "details": [
+        { "key": "stage", "label": "Inspection stage", "options": ["Move-in", "Move-out", "Interim"], "required": true },
+        { "key": "rooms", "label": "Rooms and surfaces", "hint": "Identify the room and the observed condition of its floors, walls, or doors", "limit": 200, "required": true },
+        { "key": "fixtures", "label": "Fixtures and appliances", "hint": "Name the fixture or appliance and describe its condition", "limit": 200 },
+        { "key": "followUp", "label": "Follow-up and photos", "hint": "Repairs to follow up on or references to photos kept with your records", "limit": 200 }
+      ]
+    },
+    {
+      "id": "key-handover-receipt",
+      "title": "Key Handover Receipt",
+      "description": "Record which keys, fobs, and remotes changed hands and who received them.",
+      "dateLabel": "Handover date",
+      "section": "Items transferred",
+      "acknowledgment": "The receiving and delivering parties acknowledge the transfer of the items listed above.",
+      "roles": ["Receiving party", "Delivering party"],
+      "details": [
+        { "key": "direction", "label": "Transfer type", "options": ["Issue", "Return", "Exchange"], "required": true },
+        { "key": "inventory", "label": "Items and quantities", "hint": "For example, two entrance keys, one mailbox key, and one garage remote", "limit": 200, "required": true },
+        { "key": "identifiers", "label": "Item identifiers", "hint": "Tag or serial numbers, if applicable", "limit": 200 },
+        { "key": "notes", "label": "Handover notes", "hint": "Condition, missing items, or arrangements made at handover", "limit": 200 }
+      ]
+    }
+  ]
+}

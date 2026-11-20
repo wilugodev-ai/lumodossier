@@ -1,4 +1,4 @@
-import { cp, mkdir } from 'node:fs/promises';
+import { cp, mkdir, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -12,3 +12,10 @@ await Promise.all(
 );
 await cp(path.join(base, 'build/pdf.worker.min.mjs'), path.join(target, 'pdf.worker.min.mjs'));
 await cp(path.join(base, 'LICENSE'), path.join(target, 'LICENSE'));
+
+const forms = fileURLToPath(new URL('../../api/assets/real-estate/', import.meta.url));
+const previews = fileURLToPath(new URL('../public/templates/', import.meta.url));
+await mkdir(previews, { recursive: true });
+for (const file of await readdir(forms)) {
+  if (file.endsWith('.pdf')) await cp(path.join(forms, file), path.join(previews, file));
+}

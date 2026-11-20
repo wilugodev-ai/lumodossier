@@ -14,4 +14,5 @@ playwright-report/
 *.log
 .DS_Store
 apps/web/public/pdfjs/
+apps/web/public/templates/
 supabase/.temp/

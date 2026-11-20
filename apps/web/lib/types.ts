@@ -1,5 +1,5 @@
 export type Kind = 'signature' | 'initials' | 'date' | 'text' | 'checkbox';
-export type Person = { id: string; name: string; email: string };
+export type Person = { id: string; name: string; email: string; signingRole?: string };
 export type Field = {
   id: string;
   personId: string;
