@@ -1,6 +1,8 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { PDFDocument } from 'pdf-lib';
 import { fixture, samplePdf, unusedPort } from './fixture';
 import { Signing } from '../src/recipient';
@@ -12,6 +14,11 @@ import { CONSENT_VERSION, type Draft, type Field, Problem } from '../src/model';
 import { sha256 } from '../src/pdf';
 import { tokenFor } from '../src/providers';
 import { Team } from '../src/team';
+import { preparePropertyTemplate } from '../src/property-templates';
+
+const floridaExample: { listing: Record<string, string>; referral: Record<string, string> } = JSON.parse(
+  readFileSync(join(__dirname, 'fixtures/florida-agreements.json'), 'utf8'),
+);
 
 let env: Awaited<ReturnType<typeof fixture>>,
   app: Signing,
@@ -354,6 +361,117 @@ test('property templates create separate private originals and role-bound fields
     failure(404),
   );
   assert.equal((await app.list(env.owner, space, '', '', 1, {})).total, 3);
+});
+test('Florida agreements validate business terms and retain every named party and original signing block', async () => {
+  const space = (await app.createSpace(env.owner, 'Florida agreements')).id;
+  const { listing, referral } = floridaExample;
+  const rental = {
+    ...listing,
+    coOwner: '',
+    appointment: 'Exclusive agency',
+    price: '2100',
+    offerTerms: 'Twelve month lease.',
+    feeBasis: 'Percent of initial lease base rent',
+    feeValue: '1.375',
+  };
+  const cases: [string, Record<string, string>, number][] = [
+    ['fl-exclusive-right-of-sale', listing, 3],
+    ['fl-exclusive-agency-listing', listing, 3],
+    ['fl-open-listing', { ...listing, coOwner: '' }, 2],
+    ['fl-rental-listing', rental, 2],
+    ['fl-broker-referral', referral, 2],
+  ];
+  for (const [template, values, parties] of cases) {
+    const { id } = await app.createDraft(env.owner, space, {}, { template, values });
+    const d = await app.detail(env.owner, space, id);
+    assert.equal(d.pages.length, 2);
+    assert.equal(d.recipients.length, parties);
+    assert.equal(d.fields.length, parties * 3);
+    assert.ok(d.fields.every((f) => f.page === 1 && f.required));
+    for (const person of d.recipients)
+      assert.deepEqual(
+        d.fields.filter((f) => f.personId === person.id).map((f) => f.type),
+        ['text', 'signature', 'date'],
+      );
+    const edit = {
+      title: d.title,
+      routing: d.routing,
+      crm: d.crm,
+      recipients: d.recipients,
+      fields: d.fields,
+      revision: d.revision,
+    };
+    const last = d.recipients[parties - 1].id;
+    await assert.rejects(
+      app.save(env.owner, space, id, {
+        ...edit,
+        recipients: d.recipients.slice(0, -1),
+        fields: d.fields.filter((f) => f.personId !== last),
+      }),
+      failure(400),
+    );
+    await assert.rejects(
+      app.save(env.owner, space, id, {
+        ...edit,
+        fields: d.fields.map((f, i) => (i === 0 ? { ...f, page: 0 } : f)),
+      }),
+      failure(400),
+    );
+    const saved = await app.save(env.owner, space, id, {
+      ...edit,
+      recipients: d.recipients.map((p, i) => ({
+        ...p,
+        name: 'Test signer ' + i,
+        email: 'test' + i + '@example.invalid',
+      })),
+    });
+    assert.equal(saved.revision, 2);
+  }
+  const invalidEntries: Record<string, string>[] = [
+    { endDate: '2026-01-01' },
+    { feeValue: '' },
+    { feeValue: '-5' },
+    { feeValue: '2.444' },
+    { price: '0' },
+    { brokerage: '' },
+    { propertyDescription: '' },
+  ];
+  for (const invalid of invalidEntries) {
+    await assert.rejects(
+      app.createDraft(
+        env.owner,
+        space,
+        {},
+        { template: 'fl-open-listing', values: { ...listing, ...invalid } },
+      ),
+      failure(400),
+    );
+  }
+  for (const appointment of ['Exclusive right to lease', 'Exclusive agency', 'Open rental listing']) {
+    assert.equal(
+      (await preparePropertyTemplate('fl-rental-listing', { ...rental, appointment })).recipients.length,
+      2,
+    );
+  }
+  const client = { id: randomUUID(), name: referral.client, email: 'client@example.invalid' };
+  const referred = await preparePropertyTemplate('fl-broker-referral', referral, client);
+  assert.deepEqual(
+    referred.recipients.map((p) => p.signingRole),
+    ['Referring broker', 'Receiving broker'],
+  );
+  assert.ok(referred.recipients.every((p) => p.email === '' && p.name === ''));
+  await assert.rejects(
+    preparePropertyTemplate('fl-broker-referral', { ...referral, payDays: '0.5' }),
+    failure(400),
+  );
+  await assert.rejects(
+    preparePropertyTemplate('fl-broker-referral', {
+      ...referral,
+      feeBasis: 'Percent of final sale price',
+    }),
+    failure(400),
+  );
+  assert.equal((await app.list(env.owner, space, '', '', 1, {})).total, 5);
 });
 test('CRM adapter checks membership and references and sees the same authoritative request', async () => {
   const cid = randomUUID(),

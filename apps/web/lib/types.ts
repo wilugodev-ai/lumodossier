@@ -59,7 +59,10 @@ export type Detail = Summary & {
     kind: string;
     actor: string;
     occurred_at: string;
-    detail: { reason?: string };
+    detail: {
+      reason?: string;
+      agreement?: { kind: 'listing' | 'referral'; signers: string[]; fields: string[] };
+    };
   }[];
   deliveries: {
     id: string;

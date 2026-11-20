@@ -80,6 +80,8 @@ export function Tracking({
     }
   }
   const next = doc.people.find((p) => !p.signed_at)?.id;
+  const floridaListing =
+    doc.events.find((event) => event.kind === 'created')?.detail.agreement?.kind === 'listing';
   return (
     <>
       <div className="workspace-head">
@@ -112,6 +114,15 @@ export function Tracking({
               Retry file processing
             </button>
           )}
+        </section>
+      )}
+      {floridaListing && doc.status === 'completed' && (
+        <section className="notice">
+          <strong>Give each owner their signed listing agreement</strong>
+          <p>
+            Florida requires the broker to provide each owner a legible signed copy within 24 hours of
+            obtaining the written listing. Use the signed PDF or share each owner’s private copy link.
+          </p>
         </section>
       )}
       {confirm && (

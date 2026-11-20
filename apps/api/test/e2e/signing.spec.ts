@@ -1,6 +1,7 @@
 import { test, expect, type Page, type Browser } from '@playwright/test';
 import { randomUUID, createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { samplePdf } from '../sample-pdf';
 import { recoveryMailbox, recoveryLink } from './recovery-mail';
 
@@ -360,7 +361,10 @@ test('a real estate template becomes a private draft and both parties sign the k
   await page.locator('form').getByRole('button', { name: 'Create workspace' }).click();
   await page.getByRole('button', { name: 'Real estate templates', exact: true }).click();
   const cards = page.locator('article.property-template-card');
-  await expect(cards).toHaveCount(3);
+  await expect(cards).toHaveCount(8);
+  await expect(
+    page.getByRole('region', { name: 'Florida listing agreements' }).getByRole('article'),
+  ).toHaveCount(4);
   for (const link of await cards.getByRole('link').all()) {
     const response = await page.request.get((await link.getAttribute('href'))!);
     expect(response.headers()['content-type']).toContain('application/pdf');
@@ -412,6 +416,73 @@ test('a real estate template becomes a private draft and both parties sign the k
   const downloaded = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Signed PDF', exact: true }).click();
   await (await downloaded).saveAs(info.outputPath('key-handover-signed.pdf'));
+});
+test('a Florida referral agreement is signed by the two brokers on its second page', async ({
+  page,
+  browser,
+}, info) => {
+  const { referral } = JSON.parse(
+    await readFile(join(__dirname, '../fixtures/florida-agreements.json'), 'utf8'),
+  ) as { referral: Record<string, string> };
+  await account(page);
+  await page
+    .getByRole('navigation', { name: 'Workspace navigation' })
+    .getByRole('button', { name: 'Create workspace' })
+    .click();
+  await page.getByLabel('Workspace name').fill('Florida real estate');
+  await page.locator('form').getByRole('button', { name: 'Create workspace' }).click();
+  await page.getByRole('button', { name: 'Real estate templates', exact: true }).click();
+  await page.getByRole('button', { name: 'Use Broker-to-Broker Referral Agreement' }).click();
+  for (const [key, value] of Object.entries(referral)) {
+    const field = page.locator('form [name="' + key + '"]');
+    if (await field.evaluate((el) => el.tagName === 'SELECT')) await field.selectOption(value);
+    else await field.fill(value);
+  }
+  await page.getByRole('button', { name: 'Create draft' }).click();
+  await expect(page.getByLabel('Referring broker name')).toHaveValue('');
+  await expect(page.getByRole('button', { name: 'Remove recipient 1' })).toBeDisabled();
+  const parties = [
+    ['Referring broker', 'Casey Lane'],
+    ['Receiving broker', 'Jordan Park'],
+  ];
+  for (const [role, name] of parties) {
+    await page.getByLabel(role + ' name').fill(name);
+    await page.getByLabel(role + ' email').fill(name.split(' ')[0] + '@example.invalid');
+  }
+  await page.getByRole('button', { name: 'Continue to fields' }).click();
+  await expect(page.getByText('Page 2 of 2', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Review request', exact: true }).click();
+  await page.getByRole('button', { name: 'Send request', exact: true }).click();
+  for (const [role, name] of parties) {
+    const link = await share(page, name);
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    try {
+      const signer = await context.newPage();
+      await signer.goto(link);
+      await signer
+        .locator('.value-field')
+        .getByLabel(new RegExp(role + ' printed name'))
+        .fill(name);
+      await signer.getByPlaceholder('Type your full name').fill(name);
+      await signer
+        .locator('.value-field')
+        .getByLabel(new RegExp(role + ' signing date'))
+        .fill('2026-11-20');
+      await signer.getByRole('checkbox', { name: /I consent/ }).check();
+      await signer.getByRole('checkbox', { name: /I have reviewed/ }).check();
+      await signer.getByRole('button', { name: 'Confirm and sign' }).click();
+      await expect(
+        signer.getByRole('heading', { name: /Your signature is recorded|Your copy is ready/ }),
+      ).toBeVisible();
+    } finally {
+      await context.close();
+    }
+    await page.reload();
+  }
+  await expect(page.locator('.status')).toHaveText('Completed');
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Signed PDF', exact: true }).click();
+  await (await download).saveAs(info.outputPath('signed-florida-referral.pdf'));
 });
 test('connected customer view prefills a request and tracks the same completion as the sender', async ({
   page,

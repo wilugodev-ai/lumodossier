@@ -1,0 +1,35 @@
+{
+  "listing": {
+    "owner": "Casey Lane",
+    "coOwner": "Taylor West",
+    "brokerage": "Example Coast Test Brokerage",
+    "brokerLicense": "TEST-FL-01",
+    "address": "18 Example Lane, Unit 4, Orlando, FL",
+    "county": "Orange",
+    "propertyDescription": "Unit 4 and its assigned garage space, test parcel EXAMPLE-04.",
+    "startDate": "2026-11-20",
+    "endDate": "2027-02-20",
+    "price": "325000.00",
+    "offerTerms": "Owner will consider cash or financing. Kitchen appliances are included.",
+    "feeBasis": "Flat fee in USD",
+    "feeValue": "1250",
+    "marketing": "Private outreach",
+    "access": "Arrange each showing with the owner."
+  },
+  "referral": {
+    "referringFirm": "Example Harbor Test Brokerage",
+    "referringLicense": "Florida TEST-FL-02",
+    "receivingFirm": "Example Coast Test Brokerage",
+    "receivingLicense": "TEST-FL-01",
+    "client": "Alex Rivera",
+    "transaction": "Buyer purchase",
+    "scope": "One residential purchase in Orange County, Florida.",
+    "startDate": "2026-11-20",
+    "endDate": "2027-02-20",
+    "payDays": "7",
+    "introduction": "Arrange a client-approved introductory call.",
+    "feeBasis": "Percent of receiving brokerage compensation",
+    "feeValue": "12.375%",
+    "exclusions": "Transactions already under contract before the start date."
+  }
+}

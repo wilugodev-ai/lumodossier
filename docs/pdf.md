@@ -23,9 +23,9 @@ Typed values must be printable in the bundled font. The API checks glyph coverag
 
 ## Real estate forms
 
-The three original blank forms and their print layout are in `apps/api/assets/real-estate`. To update the blanks, edit `catalog.json`, run `python apps/api/scripts/render_property_templates.py` with ReportLab installed, and review the resulting PDFs. The web build copies the blank PDFs to `/templates/`.
+The blank forms and their print layouts are in `apps/api/assets/real-estate`. To update the three property records, edit `catalog.json` and run `python apps/api/scripts/render_property_templates.py` with ReportLab installed. To update the Florida agreements, edit and run `python apps/api/scripts/render_florida_agreements.py`. It regenerates five two-page PDFs and their matching `florida.json` field definitions. Render and review both pages of each changed form. The web build copies the blank PDFs to `/templates/`.
 
-When a sender creates a draft, the API prints the property details onto a private copy. The same layout defines the signature and date rectangles for both parties. Each draft gets its own original hash, recipient IDs and field IDs. [Template walkthrough](../README.md#use-a-real-estate-template)
+When a sender creates a draft, the API prints the details onto a private copy. Each draft gets its own original hash, recipient IDs and field IDs. For a Florida agreement, the immutable creation event also identifies the required parties and their printed-name, signature, and date fields. Adding a second owner activates a third signing block. A referral binds the two brokerage signers. [Template walkthrough](../README.md#use-a-real-estate-template)
 
 ## Verify placement
 

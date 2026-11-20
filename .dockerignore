@@ -18,6 +18,7 @@
 !apps/api/assets/real-estate/
 !apps/api/assets/real-estate/*.pdf
 !apps/api/assets/real-estate/catalog.json
+!apps/api/assets/real-estate/florida.json
 !apps/web/
 !apps/web/package.json
 !apps/web/tsconfig.json

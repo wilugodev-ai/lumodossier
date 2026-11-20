@@ -36,13 +36,25 @@ Open **Your account** to see your email, current workspace and role, or change y
 
 ## Use a real estate template
 
-In **Documents**, choose **Real estate templates**. Open a blank PDF to see the form, or choose **Use template**, enter the property details, and select **Create draft**. Enter a name and email for each signing role. The draft already has a signature and date for each party. You can adjust the fields and signing order before sending. A connected Touchlumo customer is prefilled in the first role.
+In **Documents**, choose **Real estate templates**. Preview the blank PDF, choose **Use template**, enter the terms, and select **Create draft**. Add the signers’ names and emails before sending. The Florida agreements keep each original party’s printed name, signature, and date together on page two.
+
+| Florida agreement | What it covers |
+| --- | --- |
+| [Exclusive Right of Sale](https://lumodossier.com/templates/fl-exclusive-right-of-sale.pdf) | One brokerage earns the negotiated fee on a qualifying sale whoever finds the buyer. |
+| [Exclusive Agency](https://lumodossier.com/templates/fl-exclusive-agency-listing.pdf) | An owner who independently procures the buyer can sell without a listing fee. |
+| [Open Listing](https://lumodossier.com/templates/fl-open-listing.pdf) | The owner may engage multiple brokers. This brokerage earns its fee when it procures the buyer on a qualifying sale. |
+| [Residential Rental Listing](https://lumodossier.com/templates/fl-rental-listing.pdf) | The landlord chooses exclusive right to lease, exclusive agency, or open rental listing and enters the tenant-placement fee. |
+| [Broker-to-Broker Referral](https://lumodossier.com/templates/fl-broker-referral.pdf) | The two licensed brokerages identify the client, covered transaction, fee basis, and payment deadline. |
+
+These are original LumoDossier forms for review by the supervising Florida broker or Florida counsel before first use. Sale listings use Florida transaction brokerage. The listing forms accommodate one or two named owners. Each fee is entered by the parties. On a completed listing, the sender sees a reminder to get each owner a signed copy within Florida’s 24-hour period. The referral form assigns only the referring and receiving brokers as signers. [Florida Statutes § 475.25(1)(h) and (r)](https://flsenate.gov/Laws/Statutes/2026/475.25) · [Florida Statutes § 475.278](https://flsenate.gov/Laws/Statutes/2026/475.278) · [Real estate brokerage referrals under Regulation X](https://www.consumerfinance.gov/rules-policy/regulations/1024/2023-04-19/14/)
+
+The library also includes three property records.
 
 - Record a visit and follow-up questions. [Property Showing Record](https://lumodossier.com/templates/property-showing-record.pdf)
 - Record observations during a move-in, move-out, or interim inspection. [Property Condition Report](https://lumodossier.com/templates/property-condition-report.pdf)
 - Record the issue, return, or exchange of keys, fobs, and remotes. [Key Handover Receipt](https://lumodossier.com/templates/key-handover-receipt.pdf)
 
-The three blank forms are public. The completed property details and the resulting PDFs use the workspace’s private document storage.
+The blank forms are public. Entered details and signed documents use the workspace’s private document storage. A linked Touchlumo customer can populate the first party on a property record or a matching named owner on a Florida listing.
 
 ## Walk through a signature request
 

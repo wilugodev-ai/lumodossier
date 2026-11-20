@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { Sql, one } from './db';
 import {
   DocumentRow,
+  Draft,
+  Field,
   Identity,
   Progress,
   Refs,
@@ -28,6 +30,36 @@ import { preparePropertyTemplate } from './property-templates';
 type DraftSource =
   { title: string; data: Buffer } | { template: string; values: Record<string, string> };
 
+type Agreement = { kind: 'listing' | 'referral'; signers: string[]; fields: string[] };
+
+async function preserveAgreement(tx: Sql, previous: DocumentRow, draft: Draft) {
+  const created = await one<{ agreement: Agreement }>(
+    tx,
+    "select detail->'agreement' as agreement from lumo.events where request_id=$1 and kind='created' and detail ? 'agreement' limit 1",
+    [previous.id],
+  );
+  if (!created) return;
+  for (const id of created.agreement.signers) {
+    const party = previous.recipients.find((p) => p.id === id);
+    ensure(
+      party && draft.recipients.some((p) => p.id === id && p.signingRole === party.signingRole),
+      400,
+      'Keep a signer for each party named in the agreement.',
+    );
+  }
+  for (const id of created.agreement.fields) {
+    const before = previous.fields.find((f) => f.id === id);
+    const after = draft.fields.find((f) => f.id === id);
+    ensure(
+      before &&
+        after &&
+        (Object.keys(before) as (keyof Field)[]).every((key) => before[key] === after[key]),
+      400,
+      'Keep the original signature blocks for the parties named in the agreement.',
+    );
+  }
+}
+
 export const statuses = [
   'draft',
   'sent',
@@ -47,10 +79,10 @@ export class Sender extends Repository {
       const contact = await this.refs(who, space, crm);
       const associated = contact?.id ? { ...crm, customer: contact.id } : crm;
       const customer = contact?.email ? personFromContact(contact.name, contact.email) : undefined;
-      const { title, data, recipients, fields } =
+      const { title, data, recipients, fields, agreement } =
         'template' in source
           ? await preparePropertyTemplate(source.template, source.values, customer)
-          : { ...source, recipients: customer ? [customer] : [], fields: [] };
+          : { ...source, recipients: customer ? [customer] : [], fields: [], agreement: undefined };
       const pages = await inspectPdf(data);
       validateDraft({ title, routing: 'sequential', recipients, fields, crm: associated }, pages);
       const id = randomUUID(),
@@ -81,6 +113,7 @@ export class Sender extends Repository {
         version,
         originalHash: r!.original_hash,
         ...('template' in source ? { template: source.template } : {}),
+        ...(agreement ? { agreement } : {}),
       });
       return { id, revision: 1 };
     });
@@ -96,6 +129,7 @@ export class Sender extends Repository {
         'Another change was saved. Reload this draft before editing.',
       );
       validateDraft(d, r.pages);
+      await preserveAgreement(tx, r, d);
       const contact = await this.refs(who, space, d.crm);
       if (contact?.id) d.crm = { ...d.crm, customer: contact.id };
       await tx.query(

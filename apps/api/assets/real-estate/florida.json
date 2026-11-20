@@ -1,0 +1,778 @@
+{
+  "templates": [
+    {
+      "id": "fl-exclusive-right-of-sale",
+      "title": "Exclusive Right of Sale Listing Agreement",
+      "kind": "sale",
+      "description": "One listing brokerage earns the agreed fee on a qualifying sale, whoever finds the buyer."
+    },
+    {
+      "id": "fl-exclusive-agency-listing",
+      "title": "Exclusive Agency Listing Agreement",
+      "kind": "sale",
+      "description": "One listing brokerage markets the property. The owner retains the independent-sale exception."
+    },
+    {
+      "id": "fl-open-listing",
+      "title": "Open Listing Agreement",
+      "kind": "sale",
+      "description": "The owner may engage several brokers. This brokerage earns its fee when it procures the buyer."
+    },
+    {
+      "id": "fl-rental-listing",
+      "title": "Residential Rental Listing Agreement",
+      "kind": "rental",
+      "description": "A landlord appoints a brokerage to find a tenant and chooses the type of rental listing."
+    },
+    {
+      "id": "fl-broker-referral",
+      "title": "Broker-to-Broker Referral Agreement",
+      "kind": "referral",
+      "description": "Two licensed brokerages agree on a client introduction, the referral fee, and payment timing."
+    }
+  ],
+  "specs": {
+    "sale": {
+      "inputs": [
+        {
+          "key": "owner",
+          "label": "Owner legal name",
+          "box": [
+            48,
+            157,
+            247,
+            34
+          ],
+          "type": "text",
+          "limit": 120,
+          "required": true,
+          "hint": "Individual or entity holding title"
+        },
+        {
+          "key": "coOwner",
+          "label": "Second owner legal name",
+          "box": [
+            317,
+            157,
+            247,
+            34
+          ],
+          "type": "text",
+          "limit": 120,
+          "required": false
+        },
+        {
+          "key": "brokerage",
+          "label": "Listing brokerage legal name",
+          "box": [
+            48,
+            211,
+            328,
+            34
+          ],
+          "type": "text",
+          "limit": 120,
+          "required": true
+        },
+        {
+          "key": "brokerLicense",
+          "label": "Florida brokerage license number",
+          "box": [
+            396,
+            211,
+            168,
+            34
+          ],
+          "type": "text",
+          "limit": 40,
+          "required": true
+        },
+        {
+          "key": "address",
+          "label": "Florida property address",
+          "box": [
+            48,
+            265,
+            328,
+            40
+          ],
+          "type": "text",
+          "limit": 160,
+          "required": true,
+          "hint": "Street, unit, city, and ZIP"
+        },
+        {
+          "key": "county",
+          "label": "Florida county",
+          "box": [
+            396,
+            265,
+            168,
+            40
+          ],
+          "type": "text",
+          "limit": 55,
+          "required": true
+        },
+        {
+          "key": "propertyDescription",
+          "label": "Property description or county parcel ID",
+          "box": [
+            48,
+            323,
+            516,
+            44
+          ],
+          "type": "text",
+          "limit": 220,
+          "required": true,
+          "hint": "Identify the real property and any included unit or parcel"
+        },
+        {
+          "key": "startDate",
+          "label": "Start date",
+          "box": [
+            48,
+            389,
+            153,
+            32
+          ],
+          "type": "date",
+          "limit": 10,
+          "required": true
+        },
+        {
+          "key": "endDate",
+          "label": "Expiration date",
+          "box": [
+            223,
+            389,
+            153,
+            32
+          ],
+          "type": "date",
+          "limit": 10,
+          "required": true
+        },
+        {
+          "key": "price",
+          "label": "Asking price (USD)",
+          "box": [
+            396,
+            389,
+            168,
+            32
+          ],
+          "type": "money",
+          "limit": 16,
+          "required": true
+        },
+        {
+          "key": "offerTerms",
+          "label": "Proposed sale terms",
+          "box": [
+            48,
+            440,
+            516,
+            45
+          ],
+          "type": "text",
+          "limit": 220,
+          "required": true,
+          "hint": "Financing, inclusions, exclusions, or other offering terms"
+        },
+        {
+          "key": "feeBasis",
+          "label": "Negotiated fee basis",
+          "box": [
+            48,
+            506,
+            328,
+            35
+          ],
+          "type": "text",
+          "limit": 140,
+          "required": true,
+          "options": [
+            "Flat fee in USD",
+            "Percent of final sale price"
+          ]
+        },
+        {
+          "key": "feeValue",
+          "label": "Agreed amount or rate",
+          "box": [
+            396,
+            506,
+            168,
+            35
+          ],
+          "type": "fee",
+          "limit": 18,
+          "required": true
+        },
+        {
+          "key": "marketing",
+          "label": "Authorized marketing",
+          "box": [
+            48,
+            563,
+            516,
+            37
+          ],
+          "type": "text",
+          "limit": 140,
+          "required": true,
+          "options": [
+            "Private outreach",
+            "Public advertising",
+            "Public advertising and eligible MLS entry"
+          ]
+        },
+        {
+          "key": "access",
+          "label": "Showing and access instructions",
+          "box": [
+            48,
+            623,
+            516,
+            41
+          ],
+          "type": "text",
+          "limit": 200,
+          "required": false,
+          "hint": "Scheduling instructions and occupancy restrictions"
+        }
+      ],
+      "signers": [
+        {
+          "role": "Brokerage representative"
+        },
+        {
+          "role": "Owner",
+          "nameKey": "owner"
+        },
+        {
+          "role": "Second owner",
+          "nameKey": "coOwner",
+          "when": "coOwner"
+        }
+      ]
+    },
+    "rental": {
+      "inputs": [
+        {
+          "key": "owner",
+          "label": "Owner legal name",
+          "box": [
+            48,
+            157,
+            247,
+            34
+          ],
+          "type": "text",
+          "limit": 120,
+          "required": true,
+          "hint": "Individual or entity holding title"
+        },
+        {
+          "key": "coOwner",
+          "label": "Second owner legal name",
+          "box": [
+            317,
+            157,
+            247,
+            34
+          ],
+          "type": "text",
+          "limit": 120,
+          "required": false
+        },
+        {
+          "key": "brokerage",
+          "label": "Listing brokerage legal name",
+          "box": [
+            48,
+            211,
+            328,
+            34
+          ],
+          "type": "text",
+          "limit": 120,
+          "required": true
+        },
+        {
+          "key": "brokerLicense",
+          "label": "Florida brokerage license number",
+          "box": [
+            396,
+            211,
+            168,
+            34
+          ],
+          "type": "text",
+          "limit": 40,
+          "required": true
+        },
+        {
+          "key": "address",
+          "label": "Florida property address",
+          "box": [
+            48,
+            265,
+            328,
+            40
+          ],
+          "type": "text",
+          "limit": 160,
+          "required": true,
+          "hint": "Street, unit, city, and ZIP"
+        },
+        {
+          "key": "county",
+          "label": "Florida county",
+          "box": [
+            396,
+            265,
+            168,
+            40
+          ],
+          "type": "text",
+          "limit": 55,
+          "required": true
+        },
+        {
+          "key": "propertyDescription",
+          "label": "Property description or county parcel ID",
+          "box": [
+            48,
+            323,
+            516,
+            44
+          ],
+          "type": "text",
+          "limit": 220,
+          "required": true,
+          "hint": "Identify the real property and any included unit or parcel"
+        },
+        {
+          "key": "startDate",
+          "label": "Start date",
+          "box": [
+            48,
+            389,
+            153,
+            32
+          ],
+          "type": "date",
+          "limit": 10,
+          "required": true
+        },
+        {
+          "key": "endDate",
+          "label": "Expiration date",
+          "box": [
+            223,
+            389,
+            153,
+            32
+          ],
+          "type": "date",
+          "limit": 10,
+          "required": true
+        },
+        {
+          "key": "price",
+          "label": "Monthly asking rent (USD)",
+          "box": [
+            396,
+            389,
+            168,
+            32
+          ],
+          "type": "money",
+          "limit": 16,
+          "required": true
+        },
+        {
+          "key": "offerTerms",
+          "label": "Proposed lease terms",
+          "box": [
+            48,
+            440,
+            516,
+            45
+          ],
+          "type": "text",
+          "limit": 220,
+          "required": true,
+          "hint": "Lease length, availability, and deposit terms"
+        },
+        {
+          "key": "feeBasis",
+          "label": "Negotiated fee basis",
+          "box": [
+            48,
+            506,
+            328,
+            35
+          ],
+          "type": "text",
+          "limit": 140,
+          "required": true,
+          "options": [
+            "Flat fee in USD",
+            "Percent of initial lease base rent"
+          ]
+        },
+        {
+          "key": "feeValue",
+          "label": "Agreed amount or rate",
+          "box": [
+            396,
+            506,
+            168,
+            35
+          ],
+          "type": "fee",
+          "limit": 18,
+          "required": true
+        },
+        {
+          "key": "appointment",
+          "label": "Rental appointment",
+          "box": [
+            48,
+            563,
+            232,
+            37
+          ],
+          "type": "text",
+          "limit": 140,
+          "required": true,
+          "options": [
+            "Exclusive right to lease",
+            "Exclusive agency",
+            "Open rental listing"
+          ]
+        },
+        {
+          "key": "marketing",
+          "label": "Authorized marketing",
+          "box": [
+            300,
+            563,
+            264,
+            37
+          ],
+          "type": "text",
+          "limit": 140,
+          "required": true,
+          "options": [
+            "Private outreach",
+            "Public advertising",
+            "Public advertising and eligible MLS entry"
+          ]
+        },
+        {
+          "key": "access",
+          "label": "Showing and access instructions",
+          "box": [
+            48,
+            623,
+            516,
+            41
+          ],
+          "type": "text",
+          "limit": 200,
+          "required": false,
+          "hint": "Scheduling instructions and occupancy restrictions"
+        }
+      ],
+      "signers": [
+        {
+          "role": "Brokerage representative"
+        },
+        {
+          "role": "Owner",
+          "nameKey": "owner"
+        },
+        {
+          "role": "Second owner",
+          "nameKey": "coOwner",
+          "when": "coOwner"
+        }
+      ]
+    },
+    "referral": {
+      "inputs": [
+        {
+          "key": "referringFirm",
+          "label": "Referring brokerage legal name",
+          "box": [
+            48,
+            157,
+            290,
+            34
+          ],
+          "type": "text",
+          "limit": 120,
+          "required": true
+        },
+        {
+          "key": "referringLicense",
+          "label": "Referring license jurisdiction and number",
+          "box": [
+            359,
+            157,
+            205,
+            34
+          ],
+          "type": "text",
+          "limit": 75,
+          "required": true
+        },
+        {
+          "key": "receivingFirm",
+          "label": "Receiving brokerage legal name",
+          "box": [
+            48,
+            211,
+            290,
+            34
+          ],
+          "type": "text",
+          "limit": 120,
+          "required": true
+        },
+        {
+          "key": "receivingLicense",
+          "label": "Receiving Florida brokerage license number",
+          "box": [
+            359,
+            211,
+            205,
+            34
+          ],
+          "type": "text",
+          "limit": 40,
+          "required": true
+        },
+        {
+          "key": "client",
+          "label": "Referred client name",
+          "box": [
+            48,
+            265,
+            290,
+            40
+          ],
+          "type": "text",
+          "limit": 120,
+          "required": true
+        },
+        {
+          "key": "transaction",
+          "label": "Covered transaction",
+          "box": [
+            359,
+            265,
+            205,
+            40
+          ],
+          "type": "text",
+          "limit": 140,
+          "required": true,
+          "options": [
+            "Buyer purchase",
+            "Seller sale",
+            "Landlord lease",
+            "Tenant lease"
+          ]
+        },
+        {
+          "key": "scope",
+          "label": "Florida property, area, and scope of referral",
+          "box": [
+            48,
+            323,
+            516,
+            44
+          ],
+          "type": "text",
+          "limit": 220,
+          "required": true,
+          "hint": "Identify the property or search area and the business being referred"
+        },
+        {
+          "key": "startDate",
+          "label": "Start date",
+          "box": [
+            48,
+            389,
+            153,
+            32
+          ],
+          "type": "date",
+          "limit": 10,
+          "required": true
+        },
+        {
+          "key": "endDate",
+          "label": "Expiration date",
+          "box": [
+            223,
+            389,
+            153,
+            32
+          ],
+          "type": "date",
+          "limit": 10,
+          "required": true
+        },
+        {
+          "key": "payDays",
+          "label": "Payment due in calendar days",
+          "box": [
+            396,
+            389,
+            168,
+            32
+          ],
+          "type": "days",
+          "limit": 4,
+          "required": true,
+          "hint": "After the transaction and fee collection"
+        },
+        {
+          "key": "introduction",
+          "label": "Introduction and follow-up instructions",
+          "box": [
+            48,
+            440,
+            516,
+            45
+          ],
+          "type": "text",
+          "limit": 220,
+          "required": false,
+          "hint": "How the client has agreed to be introduced"
+        },
+        {
+          "key": "feeBasis",
+          "label": "Negotiated fee basis",
+          "box": [
+            48,
+            506,
+            328,
+            35
+          ],
+          "type": "text",
+          "limit": 140,
+          "required": true,
+          "options": [
+            "Flat fee in USD",
+            "Percent of receiving brokerage compensation"
+          ]
+        },
+        {
+          "key": "feeValue",
+          "label": "Agreed amount or rate",
+          "box": [
+            396,
+            506,
+            168,
+            35
+          ],
+          "type": "fee",
+          "limit": 18,
+          "required": true
+        },
+        {
+          "key": "exclusions",
+          "label": "Excluded clients, properties, or transactions",
+          "box": [
+            48,
+            563,
+            516,
+            45
+          ],
+          "type": "text",
+          "limit": 220,
+          "required": false
+        }
+      ],
+      "signers": [
+        {
+          "role": "Referring broker"
+        },
+        {
+          "role": "Receiving broker"
+        }
+      ]
+    }
+  },
+  "signaturePage": 1,
+  "signatureSlots": [
+    {
+      "text": [
+        48,
+        554,
+        151,
+        32
+      ],
+      "signature": [
+        218,
+        542,
+        208,
+        44
+      ],
+      "date": [
+        447,
+        551,
+        117,
+        35
+      ]
+    },
+    {
+      "text": [
+        48,
+        617,
+        151,
+        32
+      ],
+      "signature": [
+        218,
+        605,
+        208,
+        44
+      ],
+      "date": [
+        447,
+        614,
+        117,
+        35
+      ]
+    },
+    {
+      "text": [
+        48,
+        680,
+        151,
+        32
+      ],
+      "signature": [
+        218,
+        668,
+        208,
+        44
+      ],
+      "date": [
+        447,
+        677,
+        117,
+        35
+      ]
+    }
+  ]
+}

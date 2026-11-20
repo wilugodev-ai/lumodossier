@@ -15,6 +15,7 @@ type Selection = {
   hh: number;
 };
 export function Editor({ doc, path, done }: { doc: Detail; path: string; done: () => void }) {
+  const agreement = doc.events.find((event) => event.kind === 'created')?.detail.agreement;
   const [d, setD] = useState<Draft>({
       title: doc.title,
       recipients: doc.recipients,
@@ -24,7 +25,7 @@ export function Editor({ doc, path, done }: { doc: Detail; path: string; done: (
     }),
     [revision, setRevision] = useState(doc.revision),
     [step, setStep] = useState(0),
-    [page, setPage] = useState(0);
+    [page, setPage] = useState(agreement ? (doc.fields[0]?.page ?? 0) : 0);
   const [selected, setSelected] = useState(''),
     [person, setPerson] = useState(doc.recipients[0]?.id ?? ''),
     [kind, setKind] = useState<Kind>('signature'),
@@ -77,6 +78,7 @@ export function Editor({ doc, path, done }: { doc: Detail; path: string; done: (
     e.preventDefault();
     e.stopPropagation();
     setSelected(f.id);
+    if (agreement?.fields.includes(f.id)) return;
     const bounds = e.currentTarget.closest('.paper-frame')!.getBoundingClientRect();
     e.currentTarget.setPointerCapture(e.pointerId);
     drag.current = {
@@ -206,6 +208,7 @@ export function Editor({ doc, path, done }: { doc: Detail; path: string; done: (
               <button
                 className="icon-btn"
                 aria-label={'Remove recipient ' + (i + 1)}
+                disabled={agreement?.signers.includes(p.id)}
                 onClick={() => {
                   const remaining = d.recipients.filter((v) => v.id !== p.id);
                   change({ recipients: remaining, fields: d.fields.filter((f) => f.personId !== p.id) });
@@ -262,6 +265,8 @@ export function Editor({ doc, path, done }: { doc: Detail; path: string; done: (
                   </button>
                   <button
                     className="resize"
+                    hidden={agreement?.fields.includes(f.id)}
+                    disabled={agreement?.fields.includes(f.id)}
                     aria-label={'Resize ' + f.label}
                     onPointerDown={(e) => start(e, f, true)}
                     onPointerMove={move}
@@ -295,7 +300,10 @@ export function Editor({ doc, path, done }: { doc: Detail; path: string; done: (
               <Plus size={16} />
               Add field
             </button>
-            {!!field && (
+            {field && agreement?.fields.includes(field.id) && (
+              <p className="hint">This field is assigned to a printed agreement signature block.</p>
+            )}
+            {!!field && !agreement?.fields.includes(field.id) && (
               <div className="field-options">
                 <h3>Selected field</h3>
                 <label>
